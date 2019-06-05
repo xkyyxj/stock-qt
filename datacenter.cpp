@@ -11,6 +11,11 @@ DataCenter::DataCenter() {
     defaultDatabase.open();
 }
 
+DataCenter::~DataCenter() {
+    if(defaultDatabase.isOpen())
+        defaultDatabase.close();
+}
+
 StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
     // 首先查看一下是否存在于map当中
     if(kInfoMap.contains(ts_code)) {

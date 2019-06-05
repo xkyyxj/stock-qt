@@ -16,9 +16,9 @@ class DataCenter: public QObject {
         K_INFO, INDEX_INFO
     };
 public:
-    DataCenter::DataCenter();
+    DataCenter();
 
-    DataCenter::~DataCenter();
+    ~DataCenter();
 
     StockBatchInfo* getStockBatchInfoByTsCode(QString ts_code);
 

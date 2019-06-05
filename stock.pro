@@ -33,6 +33,7 @@ SOURCES += \
         categorytreemodel.cpp \
         datacenter.cpp \
         main.cpp \
+        maintablemodel.cpp \
         mainwindow.cpp \
         stockchart.cpp \
         stockchartmodel.cpp \
@@ -41,8 +42,10 @@ SOURCES += \
 HEADERS += \
         category.h \
         categorytreemodel.h \
+        commonenum.h \
         datacenter.h \
         datafetch.h \
+        maintablemodel.h \
         mainwindow.h \
         rediscachetools.h \
         stockchart.h \

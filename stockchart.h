@@ -6,12 +6,12 @@
 #include <QWidget>
 #include <QPainter>
 #include <QPaintEvent>
-#include <QOpenGLWidget>
+#include <QFrame>
 #include "stockinfo.h"
 #include "stockindexinfo.h"
 #include "stockchartmodel.h"
 
-class StockChart : public QOpenGLWidget
+class StockChart : public QFrame
 {
     Q_OBJECT
 
@@ -33,10 +33,27 @@ protected:
     void paintKLine(QPainter* painter, QPaintEvent *event);
     void paintIndexLine(QPainter* painter, QPaintEvent *event);
 
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
+
+private:
+    static const int MIN_K_LINE_WIDTH;
+    static const int DEFAULT_K_LINE_WIDTH;
+    void judgeDisplay(const QRect& rect, StockBatchInfo* kInfo);
+
 private:
     QList<StockInfo> kList;
     DisplayType currDisplayType;
     StockChartModel* model;
+
+    // 每根K线的宽度
+    int eachLineWidth;
+
+    // 显示的K线区间，根据index值来判定
+    int startIndex, endIndex;
+
+    // 是否是第一次加载界面
+    bool isFirstRender;
 };
 //! [0]
 

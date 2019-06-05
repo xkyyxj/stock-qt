@@ -5,26 +5,28 @@
 #include <QSqlQuery>
 #include <QVector>
 
+#include "category.h"
+
 class TreeItem {
 public:
-    QVector<QVariant> itemData;
+    Category itemData;
     QList<TreeItem*> childItems;
     TreeItem* parentItem;
 
-    TreeItem(const QVector<QVariant>&, TreeItem*);
+    TreeItem(const Category&, TreeItem*);
     ~TreeItem();
 
     TreeItem *child(int number);
     int childCount() const;
     int columnCount() const;
-    QVariant data(int column) const;
-    bool insertChildren(int position, int count, int columns);
+    QVariant data(int role) const;
+    bool insertChildren(int position, Category& data);
     bool insertColumns(int position, int columns);
     TreeItem *parent();
     bool removeChildren(int position, int count);
     bool removeColumns(int position, int columns);
     int childNumber() const;
-    bool setData(int column, const QVariant &value);
+    bool setData(const QVariant &value, int role);
 
     void initByDataResult(QSqlQuery& query);
 };
@@ -46,6 +48,11 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 //! [1]
+//! [2]
+    TreeItem *getItem(const QModelIndex &index) const;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
+    bool setData(const QModelIndex &index, const QVariant &value, int role);
+//! [2]
 private:
     TreeItem *rootItem;
 };

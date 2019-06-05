@@ -2,6 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSqlRelationalTableModel>
+#include <maintablemodel.h>
+#include "stockchartmodel.h"
+#include <QModelIndex>
 
 namespace Ui {
 class MainWindow;
@@ -16,7 +20,16 @@ public:
     ~MainWindow();
 
 private:
+    void initTableModel();
+
+private slots:
+    void tableDoubleClicked(const QModelIndex& index);
+
+private:
     Ui::MainWindow *ui;
+    //QSqlRelationalTableModel* tableModel;
+    MainTableModel* tableModel;
+    StockChartModel* viewModel;
 };
 
 #endif // MAINWINDOW_H
