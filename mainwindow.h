@@ -6,6 +6,7 @@
 #include <maintablemodel.h>
 #include "stockchartmodel.h"
 #include <QModelIndex>
+#include <QItemSelection>
 
 namespace Ui {
 class MainWindow;
@@ -21,9 +22,13 @@ public:
 
 private:
     void initTableModel();
+    void initMenuAction();
 
 private slots:
     void tableDoubleClicked(const QModelIndex& index);
+    void setFetchIndexDelta();
+public slots:
+    void treeNodeSelected(const QItemSelection &selected, const QItemSelection &deselected);
 
 private:
     Ui::MainWindow *ui;

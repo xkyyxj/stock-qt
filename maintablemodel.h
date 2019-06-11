@@ -28,7 +28,8 @@ public:
     // 根据QModelIndex返回当前行的主键，主要是为了响应双击事件
     QVariant getPrimaryKeyValue(const QModelIndex& index) const;
 
-private:
+public slots:
+    void changeTableData(QString& pk);
 
 
 private:

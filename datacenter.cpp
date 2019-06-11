@@ -9,11 +9,18 @@ DataCenter::DataCenter() {
     defaultDatabase.setUserName("root");
     defaultDatabase.setPassword("123");
     defaultDatabase.open();
+
+    redis = redisConnect("127.0.0.1", 6379);
 }
 
 DataCenter::~DataCenter() {
     if(defaultDatabase.isOpen())
         defaultDatabase.close();
+
+    // 释放redis连接
+    if(redis != nullptr) {
+        redisFree(redis);
+    }
 }
 
 StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
@@ -23,7 +30,7 @@ StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
     }
 
     // 否则的话，从Redis缓存当中获取
-    //redisContext* c = redisConnect("127.0.0.1", 6379);
+
 
     // 再否则的话，从MySQL数据库当中获取
     StockBatchInfo batchInfo;
@@ -52,4 +59,10 @@ void DataCenter::executeQuery(QString querySql, std::function<void (QSqlQuery&)>
     query.prepare(querySql);
     query.exec();
     callback(query);
+}
+
+void DataCenter::startFetchIndexInfo() {
+    QVector<QString> vector;
+    vector.push_back("603069.SH");
+    dataFetch.fetchIndexData(vector);
 }

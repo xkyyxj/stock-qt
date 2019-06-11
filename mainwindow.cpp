@@ -4,6 +4,8 @@
 #include <QSqlDatabase>
 #include <iostream>
 #include <QVector>
+#include <QItemSelectionModel>
+#include <QInputDialog>
 
 extern DataCenter dataCenter;
 
@@ -26,13 +28,17 @@ void MainWindow::initTableModel() {
     tableModel->setHeaderData(2, Qt::Horizontal, tr("pk11"));
     tableModel->select();*/
     QVector<QString> selectColumns;
-    selectColumns.push_back("category_content.ts_code");
+    selectColumns.push_back("ana_category_detail.ts_code");
     tableModel = new MainTableModel(&dataCenter, this);
-    tableModel->setTableName("category_content join stock_list on stock_list.ts_code=category_content.ts_code");
+    tableModel->setTableName("ana_category_detail join stock_list on stock_list.ts_code=ana_category_detail.ts_code");
     tableModel->setSelectColumns(selectColumns);
     QVector<QString> displayHead;
     displayHead.push_front("编码");
     tableModel->setDisplayHeadInfo(displayHead);
+}
+
+void MainWindow::initMenuAction() {
+
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -55,7 +61,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->openGLWidget->setModel(viewModel);
 
     // 初始化相关信号
+    // 表格双击某行的时候，图表当中展示改行股票的K线图或者折线图信息
     connect(ui->tableView, SIGNAL(doubleClicked(const QModelIndex &)),viewModel, SLOT(currSelectdStockChanged(const QModelIndex&)));
+    connect(ui->treeView->selectionModel(),SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)),
+            this,SLOT(treeNodeSelected(const QItemSelection &, const QItemSelection &)));
+
+    // 开始获取股票的实时信息
+    dataCenter.startFetchIndexInfo();
+
 }
 
 MainWindow::~MainWindow()
@@ -65,4 +78,20 @@ MainWindow::~MainWindow()
 
 void MainWindow::tableDoubleClicked(const QModelIndex& index) {
     viewModel->currSelectdStockChanged(index);
+}
+
+
+void MainWindow::treeNodeSelected(const QItemSelection &selected, const QItemSelection &deselected) {
+    QModelIndex index = selected.indexes().first();
+    QVariant varData = index.data(Category::IDRole);
+    QString pkField = varData.toString();
+
+    // 通知表格model进行数据更新
+    tableModel->setFilter("where pk_category='" + pkField + "'");
+    tableModel->selectData();
+}
+
+void MainWindow::setFetchIndexDelta() {
+    bool ok = false;
+    QString string = QInputDialog::getText(this,"4535345","24234",QLineEdit::Normal,"45345",&ok);
 }

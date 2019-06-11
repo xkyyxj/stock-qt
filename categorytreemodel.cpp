@@ -130,11 +130,15 @@ static void buildTree(TreeItem& rootItem, QVector<Category> datas) {
     int position = 0;
 
     // 构建rootItem的子节点
-    for(int i = 0;i < datas.size();i++) {
-        Category temp = datas[i];
+    QVector<Category>::iterator ite = datas.begin();
+    for(;ite != datas.end();) {
+        Category temp = *ite;
         if(temp.parentId == rootItem.data(Category::IDRole)) {
             rootItem.insertChildren(position++, temp);
-            datas.remove(i);
+            ite = datas.erase(ite);
+        }
+        else {
+            ++ite;
         }
     }
 
@@ -192,10 +196,13 @@ QVariant CategoryTreeModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (role != Qt::DisplayRole && role != Qt::EditRole)
+    if (role != Qt::DisplayRole && role != Qt::EditRole && role != Category::IDRole)
         return QVariant();
 
     TreeItem *item = getItem(index);
+    if(role == Category::IDRole) {
+        return item->data(Category::IDRole);
+    }
 
     return item->data(Qt::DisplayRole);
 }

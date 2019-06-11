@@ -13,13 +13,18 @@ public:
 };
 
 class StockIndexBatchInfo {
+public:
+
     struct SingleIndexInfo {
         QDateTime time;
         float price;
     };
-public:
+
     QString ts_code, ts_name;
-    QVector<SingleIndexInfo> info_list;
+    QVector<SingleIndexInfo> infoList;
+
+public:
+    void decodeFromStr(QString&);
 };
 
 #endif // STOCKINDEXINFO_H

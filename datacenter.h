@@ -2,12 +2,13 @@
 #define DATACENTER_H
 
 #include <QObject>
-//#include <hiredis.h>
+#include <hiredis.h>
 #include <QVector>
 #include <QMap>
 #include <QSqlDatabase>
 
 #include "stockinfo.h"
+#include "datafetch.h"
 
 class DataCenter: public QObject {
 	Q_OBJECT
@@ -23,12 +24,18 @@ public:
     StockBatchInfo* getStockBatchInfoByTsCode(QString ts_code);
 
     void executeQuery(QString querySql, std::function<void (QSqlQuery&)>);
+
+    void startFetchIndexInfo(); // 开始获取股票的每日信息
 signals:
 	void indexInfoChanged();
 private:
 
     QMap<QString, StockBatchInfo> kInfoMap;
     QSqlDatabase defaultDatabase;
+
+    redisContext* redis;
+
+    DataFetch dataFetch;
 };
 
 #endif // DATACENTER_H

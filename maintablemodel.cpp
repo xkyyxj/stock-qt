@@ -62,7 +62,7 @@ void MainTableModel::selectData() {
         querySql.append(selectColumns[i]);
     }
     querySql.append(selectColumns[selectColumns.size() - 1]);
-    querySql.append(" from ").append(tableName);
+    querySql.append(" from ").append(tableName).append(" ");
     querySql.append(filter);
 
     // 借用回调函数，由DataCenter执行查询

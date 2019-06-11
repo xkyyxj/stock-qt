@@ -6,14 +6,14 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets sql
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets sql network
 
 TARGET = stock
 TEMPLATE = app
 
-#INCLUDEPATH += 3rdlibrary/hiredis/include
+INCLUDEPATH += 3rdlibrary/hiredis/include
 
-#LIBS += -L"3rdlibrary/hiredis/lib" -lhiredis
+LIBS += -L"3rdlibrary/hiredis/lib" -lhiredis
 
 
 # The following define makes your compiler emit warnings if you use
@@ -32,11 +32,13 @@ CONFIG += c++11
 SOURCES += \
         categorytreemodel.cpp \
         datacenter.cpp \
+        datafetch.cpp \
         main.cpp \
         maintablemodel.cpp \
         mainwindow.cpp \
         stockchart.cpp \
         stockchartmodel.cpp \
+        stockindexinfo.cpp \
         stockinfo.cpp
 
 HEADERS += \
