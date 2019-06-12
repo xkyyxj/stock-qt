@@ -1,6 +1,7 @@
-#include "datacenter.h"
+﻿#include "datacenter.h"
 #include <QSqlQuery>
 #include <QVariant>
+#include <QTextCodec>
 
 DataCenter::DataCenter() {
     defaultDatabase = QSqlDatabase::addDatabase("QMYSQL");
@@ -63,6 +64,13 @@ void DataCenter::executeQuery(QString querySql, std::function<void (QSqlQuery&)>
 
 void DataCenter::startFetchIndexInfo() {
     QVector<QString> vector;
-    vector.push_back("603069.SH");
-    dataFetch.fetchIndexData(vector);
+
+    QString stockListQrySql("select ts_code from stock_list where market in ('主板', '中小板')");
+
+    executeQuery(stockListQrySql, [&vector, this](QSqlQuery& qryRst) -> void {
+        while(qryRst.next()) {
+            vector.push_back(qryRst.value("ts_code").toString());
+        }
+        dataFetch.fetchIndexData(vector);
+    });
 }

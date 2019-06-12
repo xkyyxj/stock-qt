@@ -1,4 +1,4 @@
-#include "stockindexinfo.h"
+﻿#include "stockindexinfo.h"
 #include <cmath>
 
 void StockIndexBatchInfo::decodeFromStr(QString &str) {
@@ -26,5 +26,15 @@ void StockIndexBatchInfo::decodeFromStr(QString &str) {
                 infoList.push_back(tempIndexInfo);
             }
         }
+    }
+}
+
+// 批量解析返回的结果，每条记录之间用;分割。
+void StockIndexBatchInfo::batchDecode(QString& input) {
+    QStringList divRest = input.split(";");
+    auto iteBegin = divRest.begin(), iteEnd = divRest.end();
+    while(iteBegin != iteEnd) {
+        decodeFromStr(*iteBegin);
+        ++iteBegin;
     }
 }

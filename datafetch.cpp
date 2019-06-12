@@ -1,9 +1,8 @@
-#include "datafetch.h"
+﻿#include "datafetch.h"
 #include <QNetworkRequest>
 #include <iostream>
 #include <QUrl>
 #include <QTextCodec>
-#include <thread>
 
 const QString DataFetch::FETCH_INDEX_URL = "http://hq.sinajs.cn/list=";
 
@@ -17,11 +16,13 @@ void DataFetch::setUrl(QString url) {
 }
 
 void DataFetch::turnFinished() {
-    lastFetchFinished = true;
+    QVector<QString> temp;
+    fetchIndexData(temp);
 }
 
 void DataFetch::readData() {
     const QByteArray array = reply->readAll();
+    // 从新浪财经接口当中返回的数据编码格式为GB18030
     QTextCodec* codec = QTextCodec::codecForName("GB18030");
     QString str = codec->toUnicode(array);
     std::string stdStr = str.toStdString();
@@ -35,11 +36,18 @@ void DataFetch::realFetchIndexData() {
     }
 }
 
-void DataFetch::fetchIndexData(QVector<QString>& codeVector) {
+void DataFetch::fetchIndexData(QVector<QString>& codes) {
+    if(codes.size() > 0) {
+        codeVector = codes;
+    }
     QString urlStr = FETCH_INDEX_URL;
+    int count = 0;
+    if(startIndex >= codeVector.size()) {
+        startIndex = 0;
+    }
     if(codeVector.size() > 0) {
-        for(int i = 0;i < codeVector.size();i++) {
-            QString tempCode = codeVector[i];
+        for(;startIndex < codeVector.size() && count < 330;count++, startIndex++) {
+            QString tempCode = codeVector[startIndex];
             if(tempCode.contains("SH")) {
                 tempCode.prepend("sh");
             }
@@ -50,7 +58,8 @@ void DataFetch::fetchIndexData(QVector<QString>& codeVector) {
             urlStr.append(tempCode).append(",");
         }
         currUrl = urlStr;
+        setUrl(currUrl);
     }
-    connect(&timer, SIGNAL(timeout()), this, SLOT(realFetchIndexData()));
-    timer.start(1000);
+    /*connect(&timer, SIGNAL(timeout()), this, SLOT(realFetchIndexData()));
+    timer.start(1000);*/
 }

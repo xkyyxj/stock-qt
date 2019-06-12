@@ -1,3 +1,4 @@
+﻿#pragma execution_character_set("utf-8")
 #ifndef STOCKCHART_H
 #define STOCKCHART_H
 

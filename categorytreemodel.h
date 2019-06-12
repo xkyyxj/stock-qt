@@ -1,3 +1,4 @@
+﻿#pragma execution_character_set("utf-8")
 #ifndef CATEGORYTREEMODEL_H
 #define CATEGORYTREEMODEL_H
 

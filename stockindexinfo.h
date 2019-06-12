@@ -1,3 +1,4 @@
+﻿#pragma execution_character_set("utf-8")
 #ifndef STOCKINDEXINFO_H
 #define STOCKINDEXINFO_H
 
@@ -25,6 +26,8 @@ public:
 
 public:
     void decodeFromStr(QString&);
+
+    void batchDecode(QString&);
 };
 
 #endif // STOCKINDEXINFO_H

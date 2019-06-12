@@ -1,3 +1,4 @@
+﻿#pragma execution_character_set("utf-8")
 #ifndef DATAFETCH_H
 #define DATAFETCH_H
 
@@ -33,6 +34,10 @@ private:
     QTimer timer;   //定时器，用于循环任务
 
     QString currUrl;
+
+    int startIndex = 0; // 共有两千多条信息，一下怼到URL上会导致错误，所以分批次查询
+
+    QVector<QString> codeVector;
 };
 
 #endif // DATAFETCH_H

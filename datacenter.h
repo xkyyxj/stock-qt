@@ -1,10 +1,11 @@
-#ifndef DATACENTER_H
+﻿#ifndef DATACENTER_H
 #define DATACENTER_H
 
 #include <QObject>
 #include <hiredis.h>
 #include <QVector>
 #include <QMap>
+#pragma execution_character_set("utf-8")
 #include <QSqlDatabase>
 
 #include "stockinfo.h"

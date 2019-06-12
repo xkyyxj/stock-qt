@@ -1,7 +1,7 @@
-#include "stockchart.h"
+﻿#include "stockchart.h"
 #include <iostream>
 
-const int StockChart::MIN_K_LINE_WIDTH = 5;
+const int StockChart::MIN_K_LINE_WIDTH = 6;
 const int StockChart::DEFAULT_K_LINE_WIDTH = 20;
 const int StockChart::MAX_K_LINE_WIDTH = 25;
 
@@ -47,7 +47,7 @@ static void paintSingleKLine(QPainter* painter, int x, int y, int width, int hei
     float main_delta = info.open > info.close ? info.open - info.close : info.close - info.open;
     float main_pct = main_delta / delta;
     int main_start_y = up_end_y, mainHeight = static_cast<int>(main_pct * height);
-    int padding = static_cast<int>(width * 0.1);
+    int padding = 2;    // 设置padding，亦即K线之间的空隙，固定为2像素（实则为4像素）
     QRect mainRect(x + padding, main_start_y, width - 2 * padding, mainHeight);
     painter->drawRect(mainRect);
     if(info.close < info.open) {
@@ -277,7 +277,7 @@ void StockChart::keyReleaseEvent(QKeyEvent *event) {
 }
 
 
-void StockChart::resizeEvent(QResizeEvent */*event*/) {
+void StockChart::resizeEvent(QResizeEvent *) {
     isFirstRender = true;
     update();
 }

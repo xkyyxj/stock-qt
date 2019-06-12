@@ -1,3 +1,4 @@
+﻿#pragma execution_character_set("utf-8")
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
