@@ -107,10 +107,10 @@ typedef struct redisReply {
     struct redisReply **element; /* elements vector for REDIS_REPLY_ARRAY */
 } redisReply;
 
-redisReader *redisReaderCreate(void);
+__declspec(dllimport) redisReader *redisReaderCreate(void);
 
 /* Function to free the reply objects hiredis returns by default. */
-__declspec(dllimport) void freeReplyObject(void *reply);
+__declspec( dllimport ) void freeReplyObject(void *reply);
 
 /* Functions to format a command according to the protocol. */
 __declspec(dllimport) int redisvFormatCommand(char **target, const char *format, va_list ap);
@@ -223,7 +223,7 @@ typedef struct redisContext {
 
 __declspec(dllimport) redisContext *redisConnectWithOptions(const redisOptions *options);
 __declspec(dllimport) redisContext *redisConnect(const char *ip, int port);
-__declspec(dllimport) __declspec(dllimport) redisContext *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv);
+__declspec(dllimport) redisContext *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv);
 __declspec(dllimport) redisContext *redisConnectNonBlock(const char *ip, int port);
 __declspec(dllimport) redisContext *redisConnectBindNonBlock(const char *ip, int port,
                                        const char *source_addr);

@@ -8,12 +8,16 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets sql network
 
+DEFINES += BOOST_USE_LIB
+
 TARGET = stock
 TEMPLATE = app
 
 INCLUDEPATH += 3rdlibrary/hiredis/include
+INCLUDEPATH += 3rdlibrary/boost/include
 
 LIBS += -L"3rdlibrary/hiredis/lib" -lhiredis
+LIBS += -L"3rdlibrary/boost/lib" -lboost_chrono-vc141-mt-x64-1_70 -lboost_system-vc141-mt-x64-1_70
 
 
 # The following define makes your compiler emit warnings if you use
@@ -36,8 +40,10 @@ SOURCES += \
         main.cpp \
         maintablemodel.cpp \
         mainwindow.cpp \
+        rediscachetools.cpp \
         stockchart.cpp \
         stockchartmodel.cpp \
+        stockindexfetch.cpp \
         stockindexinfo.cpp \
         stockinfo.cpp
 
@@ -52,8 +58,10 @@ HEADERS += \
         rediscachetools.h \
         stockchart.h \
         stockchartmodel.h \
+        stockindexfetch.h \
         stockindexinfo.h \
-        stockinfo.h
+        stockinfo.h \
+        threadutils.h
 
 FORMS += \
         maincontent.ui \

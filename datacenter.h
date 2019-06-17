@@ -2,12 +2,11 @@
 #define DATACENTER_H
 
 #include <QObject>
-#include <hiredis.h>
 #include <QVector>
 #include <QMap>
 #pragma execution_character_set("utf-8")
 #include <QSqlDatabase>
-
+#include "rediscachetools.h"
 #include "stockinfo.h"
 #include "datafetch.h"
 
@@ -34,9 +33,7 @@ private:
     QMap<QString, StockBatchInfo> kInfoMap;
     QSqlDatabase defaultDatabase;
 
-    redisContext* redis;
-
-    DataFetch dataFetch;
+    RedisCacheTools redisCache;
 };
 
 #endif // DATACENTER_H
