@@ -1,17 +1,19 @@
-#include "stockchartmodel.h"
+﻿#include "stockchartmodel.h"
 #include <QModelIndex>
 #include <iostream>
+#include "datacenter.h"
 
-StockChartModel::StockChartModel(DataCenter* data_center): dataCenter(data_center) {
-    currSelectedKInfo = dataCenter->getStockBatchInfoByTsCode("000001.SZ");
-
+StockChartModel::StockChartModel() {
+    DataCenter& dataCenter = DataCenter::getInstance();
+    currSelectedKInfo = dataCenter.getStockBatchInfoByTsCode("000001.SZ");
 }
 
 
 void StockChartModel::currSelectdStockChanged(const QModelIndex& index) {
+    DataCenter& dataCenter = DataCenter::getInstance();
     QVariant ts_code = index.data(CommonConst::PRIMARY_KEY_ROLE);
     QString real_code = ts_code.toString();
-    currSelectedKInfo = dataCenter->getStockBatchInfoByTsCode(real_code);
+    currSelectedKInfo = dataCenter.getStockBatchInfoByTsCode(real_code);
     reset();
 }
 

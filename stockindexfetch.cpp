@@ -4,8 +4,13 @@
 #define BOOST_ALL_DYN_LINK
 #include <boost/asio/basic_streambuf.hpp>
 #include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <iostream>
+//#include <zlib.h>
+
+// 两次获取股票基础数据之间的时间价格不少于2000毫秒
+static const long TWO_FETCH_DELTA_MILI = 2000;
 
 StockIndexFetch::StockIndexFetch(const StockIndexFetch& origin): context(),socket(context) {
     this->codes = origin.codes;
@@ -86,11 +91,12 @@ StockIndexFetch::StockIndexFetch(QVector<QString>&& codes): context(),socket(con
 
     // 设计为一个死循环
     for(;;) {
+        std::string tempS = boost::lexical_cast<std::string>(boost::this_thread::get_id());
         milis_t currTime = time_point_cast<milliseconds>(system_clock::now());
         milliseconds time_delta = currTime - preFetchTime;
-        // 两次获取股票实时数据之间的时间间隔少于1000毫秒
-        if(time_delta.count() < 1000) {
-            long long target_count = 1000 - time_delta.count();
+        // 两次获取股票实时数据之间的时间间隔少于2000毫秒
+        if(time_delta.count() < TWO_FETCH_DELTA_MILI) {
+            long long target_count = TWO_FETCH_DELTA_MILI - time_delta.count();
             milliseconds target_delta(target_count);
             currTime += target_delta;
         }

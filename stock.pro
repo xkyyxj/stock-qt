@@ -15,9 +15,15 @@ TEMPLATE = app
 
 INCLUDEPATH += 3rdlibrary/hiredis/include
 INCLUDEPATH += 3rdlibrary/boost/include
+INCLUDEPATH += 3rdlibrary/cpp_redis/include
+INCLUDEPATH += 3rdlibrary/tacopie/include
+INCLUDEPATH += 3rdlibrary/zlib/include
 
 LIBS += -L"3rdlibrary/hiredis/lib" -lhiredis
 LIBS += -L"3rdlibrary/boost/lib" -lboost_chrono-vc141-mt-x64-1_70 -lboost_system-vc141-mt-x64-1_70
+LIBS += -L"3rdlibrary/cpp_redis/lib" -lcpp_redis
+LIBS += -L"3rdlibrary/tacopie/lib" -ltacopie
+LIBS += -L"3rdlibrary/zlib/lib" -lzlib
 
 
 # The following define makes your compiler emit warnings if you use
@@ -45,14 +51,17 @@ SOURCES += \
         stockchartmodel.cpp \
         stockindexfetch.cpp \
         stockindexinfo.cpp \
-        stockinfo.cpp
+        stockinfo.cpp \
+        zlibcompress.cpp
 
 HEADERS += \
+        calculator.h \
         category.h \
         categorytreemodel.h \
         commonenum.h \
         datacenter.h \
         datafetch.h \
+        excpetions.h \
         maintablemodel.h \
         mainwindow.h \
         rediscachetools.h \
@@ -61,7 +70,8 @@ HEADERS += \
         stockindexfetch.h \
         stockindexinfo.h \
         stockinfo.h \
-        threadutils.h
+        threadutils.h \
+        zlibcompress.h
 
 FORMS += \
         maincontent.ui \

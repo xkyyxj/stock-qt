@@ -5,13 +5,12 @@
 #include <QObject>
 #include "stockinfo.h"
 #include "stockindexinfo.h"
-#include "datacenter.h"
 #include "commonenum.h"
 
 class StockChartModel : public QObject{
     Q_OBJECT
 public:
-    StockChartModel(DataCenter*);
+    StockChartModel();
 
     StockBatchInfo* getCurrStockKInfo();
     StockIndexBatchInfo* getCurrStockIndexInfo();
@@ -24,7 +23,6 @@ signals:
 private:
     StockBatchInfo* currSelectedKInfo;
     StockIndexBatchInfo* currSelectedIndexInfo;
-    DataCenter* dataCenter;
 
     void reset();
 

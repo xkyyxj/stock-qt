@@ -21,7 +21,6 @@ class StockIndexFetch {
 
     boost::asio::io_context context;
     boost::asio::ip::tcp::socket socket;
-
     int currFetchTargetIndex;   //当前正在获取urlTargetVec[currFetchTargetIndex]的实时信息
 public:
     StockIndexFetch(const StockIndexFetch&);

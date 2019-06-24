@@ -25,9 +25,19 @@ public:
     QVector<SingleIndexInfo> infoList;
 
 public:
-    void decodeFromStr(QString&);
+    void decodeFromStrForSina(QString&);
 
-    void batchDecode(QString&);
+    void batchDecodeForSina(QString&);
+
+    std::string encodeToStr() noexcept;
+
+    bool decodeFromStr(std::string&) noexcept;
+
+    std::string& appendEncodeToStr(std::string&) noexcept(false);
+
+    static std::string& appendEncodeUseSina(std::string&, std::string&);
+
+    static void mergeTwoEncodeStr(std::string&, std::string&, std::string&);
 };
 
 #endif // STOCKINDEXINFO_H

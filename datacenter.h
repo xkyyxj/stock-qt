@@ -9,6 +9,9 @@
 #include "rediscachetools.h"
 #include "stockinfo.h"
 #include "datafetch.h"
+#include <string>
+#include <vector>
+#include <map>
 
 class DataCenter: public QObject {
 	Q_OBJECT
@@ -16,8 +19,11 @@ class DataCenter: public QObject {
     enum {
         K_INFO, INDEX_INFO
     };
+
 public:
     DataCenter();
+
+    static DataCenter& getInstance();
 
     ~DataCenter();
 
@@ -34,6 +40,11 @@ private:
     QSqlDatabase defaultDatabase;
 
     RedisCacheTools redisCache;
+
+    std::vector<std::map<std::string, std::string>> indexInfoMap;
+
+    static DataCenter* dataCenter;
+    static DataCenter& temp;
 };
 
 #endif // DATACENTER_H

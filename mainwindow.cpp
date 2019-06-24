@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "categorytreemodel.h"
 #include <QSqlDatabase>
@@ -6,8 +6,6 @@
 #include <QVector>
 #include <QItemSelectionModel>
 #include <QInputDialog>
-
-extern DataCenter dataCenter;
 
 void MainWindow::initTableModel() {
     /*QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "db");
@@ -27,6 +25,7 @@ void MainWindow::initTableModel() {
     tableModel->setHeaderData(1, Qt::Horizontal, tr("Salary"));
     tableModel->setHeaderData(2, Qt::Horizontal, tr("pk11"));
     tableModel->select();*/
+    DataCenter& dataCenter = DataCenter::getInstance();
     QVector<QString> selectColumns;
     selectColumns.push_back("ana_category_detail.ts_code");
     tableModel = new MainTableModel(&dataCenter, this);
@@ -57,7 +56,8 @@ MainWindow::MainWindow(QWidget *parent) :
     tableModel->selectData();
 
     // 构建图形显示的model
-    viewModel = new StockChartModel(&dataCenter);
+    DataCenter& dataCenter = DataCenter::getInstance();
+    viewModel = new StockChartModel();
     ui->openGLWidget->setModel(viewModel);
 
     // 初始化相关信号
@@ -67,7 +67,18 @@ MainWindow::MainWindow(QWidget *parent) :
             this,SLOT(treeNodeSelected(const QItemSelection &, const QItemSelection &)));
 
     // 开始获取股票的实时信息
-    dataCenter.startFetchIndexInfo();
+    //dataCenter.startFetchIndexInfo();
+
+    // 尝试网Redis当中写入数据
+    std::string temp_val("6666666");
+    RedisCacheTools tools;
+    bool isOK = tools.writeStrToRedis("123", temp_val);
+    if(isOK) {
+        tools.getBinaryDataFromRedis("123", [](char* val) -> void {
+            std::string tempStr(val);
+            std::cout << tempStr << std::endl;
+        });
+    }
 
 }
 

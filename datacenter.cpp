@@ -8,6 +8,15 @@
 #include "stockindexfetch.h"
 #include <boost/thread.hpp>
 
+DataCenter* DataCenter::dataCenter = nullptr;
+
+DataCenter& DataCenter::getInstance() {
+    if(dataCenter == nullptr) {
+        dataCenter = new DataCenter();
+    }
+    return *dataCenter;
+}
+
 DataCenter::DataCenter() {
     defaultDatabase = QSqlDatabase::addDatabase("QMYSQL");
     defaultDatabase.setHostName("localhost");
@@ -15,6 +24,7 @@ DataCenter::DataCenter() {
     defaultDatabase.setUserName("root");
     defaultDatabase.setPassword("123");
     defaultDatabase.open();
+
 }
 
 DataCenter::~DataCenter() {

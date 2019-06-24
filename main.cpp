@@ -1,9 +1,6 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include <QApplication>
-#include "datacenter.h"
 #include <QTextCodec>
-
-DataCenter dataCenter;
 
 int main(int argc, char *argv[])
 {

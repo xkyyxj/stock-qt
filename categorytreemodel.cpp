@@ -1,9 +1,7 @@
-#include "categorytreemodel.h"
+﻿#include "categorytreemodel.h"
 #include "datacenter.h"
 #include <QSqlDatabase>
 #include <QSqlQuery>
-
-extern DataCenter dataCenter;
 
 //-------------------------------TreeItem----------------------------
 TreeItem::TreeItem(const Category& data, TreeItem *_parent)
@@ -173,6 +171,7 @@ void TreeItem::initByDataResult(QSqlQuery& query) {
 CategoryTreeModel::CategoryTreeModel(QObject *parent): QAbstractItemModel(parent) {
     // 从数据库当中查询数据，然后构建一颗树结构
     rootItem = new TreeItem(Category(), nullptr);
+    DataCenter& dataCenter = DataCenter::getInstance();
     dataCenter.executeQuery("select * from ana_category", [this](QSqlQuery& query) -> void {
         this->rootItem->initByDataResult(query);
     });
