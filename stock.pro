@@ -40,38 +40,38 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
-        categorytreemodel.cpp \
-        datacenter.cpp \
-        datafetch.cpp \
+        ui/categorytreemodel.cpp \
+        data/datacenter.cpp \
+        data/datafetch.cpp \
         main.cpp \
-        maintablemodel.cpp \
-        mainwindow.cpp \
-        rediscachetools.cpp \
-        stockchart.cpp \
-        stockchartmodel.cpp \
-        stockindexfetch.cpp \
-        stockindexinfo.cpp \
-        stockinfo.cpp \
-        zlibcompress.cpp
+        ui/maintablemodel.cpp \
+        ui/mainwindow.cpp \
+        utils/rediscachetools.cpp \
+        ui/stockchart.cpp \
+        ui/stockchartmodel.cpp \
+        data/stockindexfetch.cpp \
+        data/stockindexinfo.cpp \
+        data/stockinfo.cpp \
+        utils/zlibcompress.cpp
 
 HEADERS += \
         calculator.h \
         category.h \
-        categorytreemodel.h \
+        ui/categorytreemodel.h \
         commonenum.h \
-        datacenter.h \
-        datafetch.h \
+        data/datacenter.h \
+        data/datafetch.h \
         excpetions.h \
-        maintablemodel.h \
-        mainwindow.h \
-        rediscachetools.h \
-        stockchart.h \
-        stockchartmodel.h \
-        stockindexfetch.h \
-        stockindexinfo.h \
-        stockinfo.h \
+        ui/maintablemodel.h \
+        ui/mainwindow.h \
+        utils/rediscachetools.h \
+        ui/stockchart.h \
+        ui/stockchartmodel.h \
+        data/stockindexfetch.h \
+        data/stockindexinfo.h \
+        data/stockinfo.h \
         threadutils.h \
-        zlibcompress.h
+        utils/zlibcompress.h
 
 FORMS += \
         maincontent.ui \
