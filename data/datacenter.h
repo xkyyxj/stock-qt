@@ -38,7 +38,9 @@ public:
 
     static void writeIndexInfo(std::string&, bool syncToRedis);
 
-    StockBatchInfo getStockIndexInfo(std::string& code);
+    StockIndexBatchInfo getStockIndexInfo(std::string& code);
+
+    std::string getStockIndexInfoStr(std::string&);
 signals:
 	void indexInfoChanged();
 private:

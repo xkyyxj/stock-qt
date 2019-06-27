@@ -40,6 +40,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
+        calculator.cpp \
         ui/categorytreemodel.cpp \
         data/datacenter.cpp \
         data/datafetch.cpp \

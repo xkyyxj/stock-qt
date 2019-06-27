@@ -25,5 +25,6 @@ StockBatchInfo* StockChartModel::getCurrStockKInfo() {
     return currSelectedKInfo;
 }
 StockIndexBatchInfo* StockChartModel::getCurrStockIndexInfo() {
+    DataCenter& instance = DataCenter::getInstance();
     return currSelectedIndexInfo;
 }

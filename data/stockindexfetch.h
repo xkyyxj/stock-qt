@@ -28,6 +28,11 @@ class StockIndexFetch {
 
     // 从开始至今fetch的次数，如果是fetch次数达到了
     int fetchTick;
+
+    // 四个开盘以及收盘时间点
+    milis_t upBeginTime, upEndTime, downBeginTime, downEndTime;
+
+    bool socketConnected;
 public:
     StockIndexFetch(const StockIndexFetch&);
     StockIndexFetch(QVector<QString>&& codes);

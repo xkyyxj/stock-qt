@@ -24,6 +24,7 @@ DataCenter::DataCenter() {
     defaultDatabase.setPassword("123");
     defaultDatabase.open();
 
+    compressMap[boost::this_thread::get_id()] = zlib::ZLibCompress();
 }
 
 DataCenter::~DataCenter() {
@@ -67,6 +68,57 @@ void DataCenter::executeQuery(QString querySql, std::function<void (QSqlQuery&)>
     query.prepare(querySql);
     query.exec();
     callback(query);
+}
+
+std::string DataCenter::getStockIndexInfoStr(std::string& code) {
+    auto iteBegin = containsMap.begin();
+    auto iteEnd = containsMap.end();
+    boost::thread::id lockId;
+    bool found = false;
+    for(;iteBegin != iteEnd;iteBegin++) {
+        if(iteBegin->second.contains(QString::fromStdString(code))) {
+            lockId = iteBegin->first;
+            found = true;
+            break;
+        }
+    }
+
+    if(!found) {
+        return std::string();
+    }
+
+    boost::lock_guard<boost::mutex> guard(*mutextMap[lockId]);
+    std::string finalRst;
+    std::string currIndexInfo = idToConMapMap[lockId][code];
+    std::string finalIndexInfo;
+    redisCache.getBinaryDataFromRedis(code, [this, &finalIndexInfo, &currIndexInfo](char* rst, size_t size) -> void {
+        if(rst != nullptr) {
+            if(rst != nullptr) {
+                // 解压一下字符串
+                boost::thread::id currId = boost::this_thread::get_id();
+                compressMap[currId].startDecompress();
+                std::vector<unsigned char> realRst = compressMap[currId].endDecompress(reinterpret_cast<unsigned char*>(rst), size);
+
+                char* tempCharArray = reinterpret_cast<char*>(realRst.data());
+                std::string originStr(tempCharArray);
+                StockIndexBatchInfo::mergeTwoEncodeStr(originStr, currIndexInfo);
+                finalIndexInfo = std::move(originStr);
+            }
+            else {
+                finalIndexInfo = std::move(currIndexInfo);
+            }
+        }
+    });
+    return finalIndexInfo;
+}
+
+StockIndexBatchInfo DataCenter::getStockIndexInfo(std::string& code) {
+    std::string infoStr = getStockIndexInfoStr(code);
+    StockIndexBatchInfo info;
+    if(infoStr.size() > 0) {
+        info.decodeFromStr(infoStr);
+    }
+    return info;
 }
 
 void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
@@ -156,6 +208,7 @@ void DataCenter::startFetchIndexInfo() {
     need_threads += vector.size() % 330 > 0 ? 1 : 0;
     need_threads = num_threads > need_threads ? need_threads : num_threads;
 
+    std::cout << "my thread number is " << need_threads << std::endl;
     int each_threads_pro_num = static_cast<int>(vector.size() / need_threads);
     int startIndex = 0;
     for(int i = 0;i < need_threads;i++) {

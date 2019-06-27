@@ -5,9 +5,11 @@
 #include <boost/asio/basic_streambuf.hpp>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 
 #include <iostream>
 //#include <zlib.h>
+#include <ctime>
 
 // 两次获取股票基础数据之间的时间价格不少于2000毫秒
 static const long TWO_FETCH_DELTA_MILI = 2000;
@@ -94,6 +96,14 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
     this->codes = codes;
     writeIndexInfo = fun;
     fetchTick = 0;
+
+    // 初始化一下成交时间段
+    boost::gregorian::date currDate(boost::gregorian::day_clock::local_day());
+    std::string currDateStr = boost::gregorian::to_iso_extended_string(currDate);
+    std::string upBeginTime(currDateStr);
+    upBeginTime.append(" 09:30:00");
+    //strYtime()
+    //upBeginTime = boost
     // 初始化需要查询的URL列表
     int count = 0;
     QString tempStr("/list=");
@@ -148,6 +158,11 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
         sleep_until(currTime);
         namespace http = boost::beast::http;
         initSocket("hq.sinajs.cn");
+        if(!socketConnected) {
+            //std::cout << "socket connect error" << std::endl;
+            // socket连接失败，这个循环失效，继续下个循环
+            continue;
+        }
         std::string currTarget = urlTargetVec[currFetchTargetIndex++].toStdString();
         http::request<http::string_body> req{http::verb::get, currTarget, 11};
         req.set(http::field::host, "hq.sinajs.cn");
@@ -219,12 +234,38 @@ void StockIndexFetch::initSocket(const std::string& host) {
     }catch (std::exception&) {
 
     }
-    boost::system::error_code err_code = boost::asio::error::host_not_found;
+    boost::system::error_code err_code;
+
+    // 如果是像是前一个版本那样写的话，会导致始终加载到最后，然后可能导致连接问题。
+    /*
+    if(err_code) {
+        std::cout << "err1" << std::endl;
+    }
+
+    boost::system::error_code err_code2 = boost::asio::error::host_not_found;
+    if(err_code2) {
+        std::cout << "err2" << std::endl;
+    }*/
+
     boost::asio::ip::tcp::endpoint end_point;
-    while (err_code && endpoint_iterator != end_it) {
+    do {
         end_point = *endpoint_iterator;
         socket.close();
+        //boost::asio::connect(socket, end_point);
         socket.connect(end_point, err_code);
         endpoint_iterator++;
+    }
+    while (err_code && endpoint_iterator != end_it);
+
+    if(err_code) {
+        socketConnected = false;
+        std:: cout << "socket connect error!" << boost::this_thread::get_id()
+                   << err_code.message() << std::endl;        std::cout<< err_code <<std::endl;
+    }
+    else {
+        if(!socketConnected) {
+            std::cout << "reconnect success!" << std::endl;
+        }
+        socketConnected = true;
     }
 }
