@@ -9,6 +9,7 @@
 #include <boost/thread.hpp>
 #include <iostream>
 #include <boost/algorithm/string.hpp>
+#include "data/stockbaseinfo.h"
 
 DataCenter* DataCenter::dataCenter = new DataCenter();
 
@@ -34,7 +35,7 @@ DataCenter::~DataCenter() {
 
 StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
     // 首先查看一下是否存在于map当中
-    if(kInfoMap.contains(ts_code)) {
+    if(kInfoMap.find(ts_code) != kInfoMap.end()) {
         return &kInfoMap[ts_code];
     }
 
@@ -58,9 +59,53 @@ StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
     while(query.next()) {
         batchInfo.setTsName(query.value("ts_name").toString());
     }
-    kInfoMap.insert(ts_code, batchInfo);
+    kInfoMap[ts_code] = std::move(batchInfo);
 
     return &kInfoMap[ts_code];
+}
+
+std::vector<StockBaseInfo> DataCenter::getStockList() noexcept {
+    std::vector<StockBaseInfo> finalResult;
+    executeQuery("select * from stock_list", [&finalResult](QSqlQuery& query) -> void {
+        while(query.next()) {
+            StockBaseInfo info;
+            info.ts_code = query.value("ts_code").toString();
+            info.name = query.value("name").toString();
+            info.area = query.value("area").toString();
+            info.industry = query.value("industry").toString();
+            finalResult.push_back(info);
+        }
+    });
+
+    return finalResult;
+}
+
+/**
+ * 根据传入参数获取数据库当中存储的日交易信息
+ * :param: ts_code 股票代码，例如000001.SZ
+ */
+StockBatchInfo DataCenter::getStockDayInfo(const std::string& ts_code) noexcept {
+    StockBatchInfo finalResult;
+    std::string sql("select stock_base_info.*,name from stock_base_info join stock_list where ts_code=?");
+    QSqlQuery query;
+    query.prepare(QString::fromStdString(sql));
+    query.addBindValue(QString::fromStdString(ts_code));
+    query.exec();
+    bool first = true;
+    while(query.next()) {
+        if(first) {
+            finalResult.ts_code = QString::fromStdString(ts_code);
+            finalResult.ts_name = query.value("name").toString();
+            first = false;
+        }
+        StockBatchInfo::SingleInfo info;
+        info.low = query.value("low").toFloat();
+        info.high = query.value("high").toFloat();
+        info.open = query.value("open").toFloat();
+        info.close = query.value("close").toFloat();
+        info.tradeDate = query.value("trade_date").toDate();
+    }
+    return finalResult;
 }
 
 void DataCenter::executeQuery(QString querySql, std::function<void (QSqlQuery&)> callback) {
@@ -121,6 +166,29 @@ StockIndexBatchInfo DataCenter::getStockIndexInfo(std::string& code) {
     return info;
 }
 
+void DataCenter::executeInsert(std::string tableName, std::vector<std::string>& columns, std::vector<QVariantList*> values) {
+    if(columns.size() == 0 || values.size() != columns.size()) {
+        return;
+    }
+    std::string sql("insert into ");
+    sql.append(tableName).append("(");
+    for(size_t i = 0;i < columns.size() - 1;i++) {
+        sql.append(columns[i]).append(",");
+    }
+    sql.append(columns[columns.size() - 1]).append(")");
+    sql.append("values(");
+    for(size_t i = 0;i < columns.size() - 1;i++) {
+        sql.append("?,");
+    }
+    sql.append("?)");
+
+    QSqlQuery tempQuery;
+    for(size_t i = 0;i < values.size();i++)
+        tempQuery.addBindValue(*values[i]);
+    tempQuery.execBatch();
+
+}
+
 void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
     DataCenter& instance = DataCenter::getInstance();
     boost::thread::id currId = boost::this_thread::get_id();
@@ -144,11 +212,11 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         // 将sina当中获取的格式转换为目标格式：000001.SZ
         if(realCode.find("sz") == std::string::npos) {
             realCode = std::string(realCode.substr(2, 6));
-            realCode.append(".SZ");
+            realCode.append(".SH");
         }
         else {
             realCode = std::string(realCode.substr(2, 6));
-            realCode.append(".SH");
+            realCode.append(".SZ");
         }
 
         if(instance.idToConMapMap[currId].find(realCode) != instance.idToConMapMap[currId].end()) {

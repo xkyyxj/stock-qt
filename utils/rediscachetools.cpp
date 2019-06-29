@@ -1,5 +1,6 @@
 ﻿#include "rediscachetools.h"
-#include <hiredis.h>
+#include <zlib.h>
+#include <hiredis/hiredis.h>
 
 RedisCacheTools::RedisCacheTools() {
     redis = redisConnect("127.0.0.1", 6379);
@@ -65,7 +66,7 @@ bool RedisCacheTools::writeBinaryDataToStr(std::string key, unsigned char* data,
     }
 
     // 开始正常的写入流程
-    redisReply* reply = static_cast<redisReply*>(redisCommand(redis, "SET key:%s %b", key.data(), data, size));
+    redisReply* reply = static_cast<redisReply*>(redisCommand(redis, "SET %s %b", key.data(), data, size));
     if(reply == nullptr) {
         // 失败
         redisFree(redis);
@@ -85,7 +86,7 @@ bool RedisCacheTools::getBinaryDataFromRedis(std::string key, std::function<void
     }
 
     // 开始正常的读取流程
-    redisReply* reply = static_cast<redisReply*>(redisCommand(redis, "GET key:%s", key.data()));
+    redisReply* reply = static_cast<redisReply*>(redisCommand(redis, "GET %s", key.data()));
     if(reply == nullptr) {
         // 失败
         redisFree(redis);

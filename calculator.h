@@ -3,7 +3,7 @@
 
 class Calculator {
 public:
-    void findVWaveStock() noexcept;
+    void findVWaveStock(int) noexcept;
 };
 
 #endif // CALCULATOR_H

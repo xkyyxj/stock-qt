@@ -13,17 +13,7 @@ DEFINES += BOOST_USE_LIB
 TARGET = stock
 TEMPLATE = app
 
-INCLUDEPATH += 3rdlibrary/hiredis/include
-INCLUDEPATH += 3rdlibrary/boost/include
-INCLUDEPATH += 3rdlibrary/cpp_redis/include
-INCLUDEPATH += 3rdlibrary/tacopie/include
-INCLUDEPATH += 3rdlibrary/zlib/include
-
-LIBS += -L"3rdlibrary/hiredis/lib" -lhiredis
-LIBS += -L"3rdlibrary/boost/lib" -lboost_chrono-vc141-mt-x64-1_70 -lboost_system-vc141-mt-x64-1_70
-LIBS += -L"3rdlibrary/cpp_redis/lib" -lcpp_redis
-LIBS += -L"3rdlibrary/tacopie/lib" -ltacopie
-LIBS += -L"3rdlibrary/zlib/lib" -lzlib
+LIBS += -lhiredis -lz -lboost_thread -lboost_system -lboost_chrono -lboost_date_time
 
 
 # The following define makes your compiler emit warnings if you use
@@ -58,6 +48,7 @@ SOURCES += \
 HEADERS += \
         calculator.h \
         category.h \
+        data/stockbaseinfo.h \
         ui/categorytreemodel.h \
         commonenum.h \
         data/datacenter.h \

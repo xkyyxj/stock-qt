@@ -16,6 +16,8 @@
 #include "utils/rediscachetools.h"
 #include "utils/zlibcompress.h"
 
+class StockBaseInfo;
+
 class DataCenter: public QObject {
 	Q_OBJECT
 
@@ -34,7 +36,13 @@ public:
 
     void executeQuery(QString querySql, std::function<void (QSqlQuery&)>);
 
+    void executeInsert(std::string, std::vector<std::string>&, std::vector<QVariantList*>);
+
     void startFetchIndexInfo(); // 开始获取股票的每日信息
+
+    std::vector<StockBaseInfo> getStockList() noexcept;
+
+    StockBatchInfo getStockDayInfo(const std::string& ts_code) noexcept;
 
     static void writeIndexInfo(std::string&, bool syncToRedis);
 
@@ -45,7 +53,7 @@ signals:
 	void indexInfoChanged();
 private:
 
-    QMap<QString, StockBatchInfo> kInfoMap;
+    std::map<QString, StockBatchInfo> kInfoMap;
     QSqlDatabase defaultDatabase;
 
     RedisCacheTools redisCache;

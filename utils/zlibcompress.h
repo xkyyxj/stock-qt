@@ -15,7 +15,7 @@ namespace zlib {
     public:
         ZLibException(std::string) noexcept;
 
-        char const* what() const {
+        const char* what() const noexcept {
             return reason.data();
         }
     };

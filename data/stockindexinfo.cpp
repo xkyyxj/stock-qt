@@ -120,16 +120,16 @@ std::string& StockIndexBatchInfo::appendEncodeToStr(std::string& origin) {
     }
     else {
         if(origin.at(0) != '%') {
-            throw new std::exception("输入字符串格式不匹配！");
+            throw new std::runtime_error("输入字符串格式不匹配！");;
         }
 
         size_t mainStartIndex = origin.find_first_of(':');
         if(mainStartIndex == std::string::npos) {
-            throw new std::exception("输入字符串格式不匹配！");
+            throw new std::runtime_error("输入字符串格式不匹配！");
         }
         std::string ts_code = origin.substr(0, mainStartIndex + 1);
         if(this->ts_code.toStdString().compare(ts_code) != 0) {
-            throw new std::exception("输入参数同本对象编码不一致！");
+            throw new std::runtime_error("输入参数同本对象编码不一致！");
         }
     }
 
@@ -170,16 +170,16 @@ std::string& StockIndexBatchInfo::appendEncodeUseSina(std::string& origin, std::
     }
     else {
         if(origin.at(0) != '%') {
-            throw new std::exception("输入字符串格式不匹配！");
+            throw new std::runtime_error("输入字符串格式不匹配！");
         }
 
         size_t mainStartIndex = origin.find_first_of(':');
         if(mainStartIndex == std::string::npos) {
-            throw new std::exception("输入字符串格式不匹配！");
+            throw new std::runtime_error("输入字符串格式不匹配！");
         }
         ts_code = origin.substr(1, mainStartIndex - 1);
         if(realCode.compare(ts_code) != 0) {
-            throw new std::exception("代转换字符串同目标字符串所代表的股票不同！");
+            throw new std::runtime_error("代转换字符串同目标字符串所代表的股票不同！");
         }
         originHasInfo = true;
     }

@@ -19,12 +19,18 @@ class StockBatchInfo {
 public:
     struct SingleInfo {
         QDate tradeDate;
-        float open, close, high, low;
+        float open, close, high, low, pct_chg;
     };
     QString ts_code, ts_name;
     QVector<SingleInfo> info_list;
 
 public:
+    StockBatchInfo(StockBatchInfo&& origin) noexcept;
+    StockBatchInfo() noexcept {}
+
+    StockBatchInfo& operator=(const StockBatchInfo&) = delete;
+
+    StockBatchInfo& operator=(StockBatchInfo&&) noexcept;
     void addSingleDayInfos(QSqlQuery& quryInfo);
     void setTsCode(QString&& code) {
         ts_code = code;
