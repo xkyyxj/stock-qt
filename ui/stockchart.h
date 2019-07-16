@@ -29,6 +29,9 @@ public:
 public slots:
     void stockInfoChanged();
 
+signals:
+    void mouseOnChanged(StockInfo);
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     void paintKLine(QPainter* painter, QPaintEvent *event);
@@ -39,9 +42,6 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    static const int MIN_K_LINE_WIDTH;
-    static const int DEFAULT_K_LINE_WIDTH;
-    static const int MAX_K_LINE_WIDTH;
     void judgeDisplay(const QRect& rect, StockBatchInfo* kInfo);
 
 private:
@@ -51,6 +51,9 @@ private:
 
     // 每根K线的宽度
     int eachLineWidth;
+
+    // 多少根K线增加1像素宽度
+    int lineNumPartOne;
 
     // 显示的K线区间，根据index值来判定
     int startIndex, endIndex;

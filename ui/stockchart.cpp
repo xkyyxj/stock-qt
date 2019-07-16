@@ -1,21 +1,36 @@
 ﻿#include "stockchart.h"
 #include <iostream>
 
-const int StockChart::MIN_K_LINE_WIDTH = 6;
-const int StockChart::DEFAULT_K_LINE_WIDTH = 20;
-const int StockChart::MAX_K_LINE_WIDTH = 25;
+static const int MIN_K_LINE_WIDTH = 6;
+static const int DEFAULT_K_LINE_WIDTH = 20;
+static const int MAX_K_LINE_WIDTH = 25;
+
+// 价格字体的大小，12个像素
+static const int FONT_SIZE = 12;
+
+// 价格区域的宽度
+static const int PRICE_AREA_WIDTH = 60;
+// 价格区域对于左侧的边距
+static const int PRICE_MARGIN_LEFT = 5;
+// K线之间的间隔（亦即K线之间的空隙，固定为2像素（实则为4像素））
+static const int KLINE_PADDING = 2;
 
 /*
  * 鉴于如果要显示的K线太多的话，那么可能会显示不过来，那么判定一下，最多显示多少条
  */
 void StockChart::judgeDisplay(const QRect& rect, StockBatchInfo* kInfo) {
     int showNum = endIndex - startIndex;
-    showNum = showNum <= 0 ? kInfo->info_list.size() : showNum;
+    showNum = showNum <= 0 ? kInfo->info_list.size() : ++showNum;
     int eachWidth = rect.width() / showNum;
     if(eachWidth < MIN_K_LINE_WIDTH) {
         eachWidth = DEFAULT_K_LINE_WIDTH;
     }
     eachLineWidth = eachWidth;
+
+    // 对于剩余的空间，重新分配一下，以免右边会有很大的空白
+    int currWidth = eachLineWidth * showNum;
+    int leftWidth = rect.width() - currWidth;
+    lineNumPartOne = showNum / leftWidth;
 }
 
 static void paintSingleKLine(QPainter* painter, int x, int y, int width, int height, StockBatchInfo::SingleInfo& info) {
@@ -47,15 +62,14 @@ static void paintSingleKLine(QPainter* painter, int x, int y, int width, int hei
     float main_delta = info.open > info.close ? info.open - info.close : info.close - info.open;
     float main_pct = main_delta / delta;
     int main_start_y = up_end_y, mainHeight = static_cast<int>(main_pct * height);
-    int padding = 2;    // 设置padding，亦即K线之间的空隙，固定为2像素（实则为4像素）
-    QRect mainRect(x + padding, main_start_y, width - 2 * padding, mainHeight);
+    QRect mainRect(x + KLINE_PADDING, main_start_y, width - 2 * KLINE_PADDING, mainHeight);
     painter->drawRect(mainRect);
     if(info.close < info.open) {
         painter->fillRect(mainRect, color);
     }
     else {
         // 此处填充一下背景色，以防分割窗口的横线影响K线的显示
-        QRect fillRect(x + padding + 1, main_start_y + 1, width - 2 * padding - 1, mainHeight - 1);
+        QRect fillRect(x + KLINE_PADDING + 1, main_start_y + 1, width - 2 * KLINE_PADDING - 1, mainHeight - 1);
         painter->fillRect(fillRect, Qt::white);
     }
 
@@ -79,6 +93,9 @@ StockChart::StockChart(QWidget* parent) : QFrame(parent) {
     isFirstRender = true;
 
     startIndex = endIndex = -1;
+
+    // 下面这行代码使得鼠标不按下的时候也能跟踪鼠标移动事件
+    setMouseTracking(true);
 }
 
 StockChart::~StockChart() {
@@ -105,7 +122,7 @@ void StockChart::paintEvent(QPaintEvent *event)
     //painter.setRenderHint(QPainter::Antialiasing);
 
     // 开始绘制之旅
-    // 首先就是K线图
+    // 首先就是K线图priceDisplayWidth
     if(currDisplayType == DisplayType::K_TYPE) {
         paintKLine(&painter, event);
     }
@@ -124,8 +141,11 @@ void StockChart::paintKLine(QPainter* painter, QPaintEvent *event) {
     int starty = 0;
     int totalHeight =event->rect().height();
 
-    judgeDisplay(event->rect(), kInfo);
-    int displayNum = event->rect().width() / eachLineWidth;
+    int mainContentWidth = event->rect().width() - PRICE_AREA_WIDTH;
+    QRect mainRect(event->rect());
+    mainRect.setWidth(mainContentWidth);
+    judgeDisplay(mainRect, kInfo);
+    int displayNum = mainContentWidth / eachLineWidth;
     if(isFirstRender) {
         //统计一下显示区间
         endIndex = kInfo->info_list.size() - 1;
@@ -150,10 +170,9 @@ void StockChart::paintKLine(QPainter* painter, QPaintEvent *event) {
 
     int eachWinHeight = totalHeight / 10;
     for(int i = 1;i <= 10;i++) {
-        QLine tempLine(0, eachWinHeight * i, event->rect().width(), eachWinHeight * i);
+        QLine tempLine(0, eachWinHeight * i, mainContentWidth, eachWinHeight * i);
         painter->drawLine(tempLine);
     }
-
 
     // 每根K线的窗格Rect
     int x, y, height;
@@ -165,16 +184,47 @@ void StockChart::paintKLine(QPainter* painter, QPaintEvent *event) {
         paintSingleKLine(painter, x, y, eachLineWidth, height, kInfo->info_list[i]);
     }
 
-    // 绘制一下当前鼠标所在K线的位置，加一个十字线，贯穿整个窗口 TODO-- 还不行
-    std::cout << currMouseP.x() << " " << currMouseP.y() << std::endl;
+    // 最右侧绘制一个显示栏，用于显示价格(分成四个等份)
+    QFont priceFont;
+    priceFont.setPointSize(FONT_SIZE);
+    painter->setFont(priceFont);
+    QLine rightEndLine(mainContentWidth, 0, mainContentWidth, event->rect().height());
+    painter->drawLine(rightEndLine);
+
+    int eachPriceLevelHeight = event->rect().height() / 4;
+    for(int i = 0;i < 4;i++) {
+        float curPrice = maxPrice - minMaxDelta *
+                (FONT_SIZE + eachPriceLevelHeight * i) / event->rect().height();
+        painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT,
+                          FONT_SIZE + eachPriceLevelHeight * i,
+                          QString::fromStdString(std::to_string(curPrice).substr(0, 5)));
+    }
+
+    // 绘制一下当前鼠标所在K线的位置，加一个十字线，贯穿整个窗口
     int kLineNum = currMouseP.x() / eachLineWidth;
-    int pointX = kLineNum * eachLineWidth * eachLineWidth / 2;
-    QLine horizonLine(0, currMouseP.y(), event->rect().width(), currMouseP.y());
+    int pointX = 0;
+    // 处理一下，避免垂直的线越过K线显示区，到了右边价格显示区
+    if(kLineNum > (endIndex - startIndex)) {
+        pointX = mainContentWidth;
+    }
+    else {
+        pointX = kLineNum * eachLineWidth + eachLineWidth / 2;
+    }
+    QLine horizonLine(0, currMouseP.y(), mainContentWidth, currMouseP.y());
     painter->drawLine(horizonLine);
 
-    std::cout << "pointX is " << pointX << std::endl;
     QLine verticLine(pointX, 0, pointX, event->rect().height());
     painter->drawLine(verticLine);
+
+    // 绘制一下当前的价格
+    int priceBackGroudHeight = FONT_SIZE + 4;
+    float mouseOnPrice = maxPrice - minMaxDelta * currMouseP.y() / event->rect().height();
+    QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
+    painter->drawRect(mouseOnPriceBack);
+    QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);
+    painter->fillRect(priceFillBack, QColor(184, 243, 144));
+    painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT, currMouseP.y(),
+                      QString::fromStdString(std::to_string(mouseOnPrice).substr(0, 5)));
 }
 
 void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
@@ -221,9 +271,30 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
 }
 
 void StockChart::mouseMoveEvent(QMouseEvent *event) {
-    std::cout << "mouseMoveEvent: " << event->pos().x() << event->pos().y() << std::endl;
     currMouseP = event->pos();
     update();
+
+    // 发送一个事件，通知一下光标所在位置的股票已经变动了
+    // 计算一下当前光标位置下的股票索引
+    int kLineNum = currMouseP.x() / eachLineWidth;
+    StockInfo currMouseOnInfo;
+    StockBatchInfo* kInfo = model->getCurrStockKInfo();
+    currMouseOnInfo.ts_code = kInfo->getTsCode();
+    currMouseOnInfo.ts_name = kInfo->getTsName();
+    int currMouseOnIndex = startIndex + kLineNum;
+    // 因为右边有价格显示区，所以要避免数组越界的问题
+    if(currMouseOnIndex >= kInfo->info_list.size()) {
+        return;
+    }
+    // 从Model当中获取相应的股票信息
+    StockBatchInfo::SingleInfo originInfo = kInfo->info_list[currMouseOnIndex];
+    currMouseOnInfo.trade_date = originInfo.tradeDate;
+    currMouseOnInfo.low = originInfo.low;
+    currMouseOnInfo.high = originInfo.high;
+    currMouseOnInfo.open = originInfo.open;
+    currMouseOnInfo.close = originInfo.close;
+    // 发送相应的事件
+    emit mouseOnChanged(currMouseOnInfo);
 }
 
 void StockChart::keyReleaseEvent(QKeyEvent *event) {

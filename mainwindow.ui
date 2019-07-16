@@ -129,7 +129,7 @@
      <x>0</x>
      <y>0</y>
      <width>867</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -137,6 +137,7 @@
      <string>文件</string>
     </property>
     <addaction name="actionhao"/>
+    <addaction name="actioncalculate"/>
    </widget>
    <widget class="QMenu" name="menu_2">
     <property name="title">
@@ -154,6 +155,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionhao"/>
+   <addaction name="actioncalculate"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionhao">
@@ -163,6 +165,18 @@
    </property>
    <property name="text">
     <string>hao</string>
+   </property>
+  </action>
+  <action name="actioncalculate">
+   <property name="icon">
+    <iconset resource="stock.qrc">
+     <normaloff>:/images/calculator.svg</normaloff>:/images/calculator.svg</iconset>
+   </property>
+   <property name="text">
+    <string>calculate</string>
+   </property>
+   <property name="shortcutVisibleInContextMenu">
+    <bool>true</bool>
    </property>
   </action>
  </widget>

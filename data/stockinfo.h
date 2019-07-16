@@ -12,7 +12,7 @@ class StockInfo {
 public:
     QString ts_code, ts_name;
     QDate trade_date;
-    float open, close, high, low;
+    float open, close, high, low, pct_chg;
 };
 
 class StockBatchInfo {

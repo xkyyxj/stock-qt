@@ -50,7 +50,7 @@ void MainTableModel::setTableName(QString _tableName) {
     tableName = _tableName;
 }
 
-void MainTableModel::setSelectColumns(QVector<QString> _selectColumns) {
+void MainTableModel::setSelectColumns(std::vector<QString> _selectColumns) {
     selectColumns = _selectColumns;
 }
 
@@ -59,7 +59,7 @@ void MainTableModel::selectData() {
     QString querySql = "select ";
     QString tempColumns;
     for(int i = 0;i < selectColumns.size() - 1;i++) {
-        querySql.append(selectColumns[i]);
+        querySql.append(selectColumns[i]).append(",");
     }
     querySql.append(selectColumns[selectColumns.size() - 1]);
     querySql.append(" from ").append(tableName).append(" ");
@@ -78,10 +78,10 @@ void MainTableModel::selectData() {
 
         // 通知视图进行更新
         endResetModel();
-    });
+    }, QSqlDatabase());
 }
 
-void MainTableModel::setDisplayHeadInfo(QVector<QString>& displayHead) {
+void MainTableModel::setDisplayHeadInfo(std::vector<QString>& displayHead) {
     this->displayHead = displayHead;
 }
 

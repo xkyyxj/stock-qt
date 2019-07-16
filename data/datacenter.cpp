@@ -3,6 +3,7 @@
 #define BOOST_ALL_DYN_LINK
 #include <QSqlQuery>
 #include <QVariant>
+#include <QSqlError>
 #include <QTextCodec>
 #include "datacenter.h"
 #include "stockindexfetch.h"
@@ -10,6 +11,7 @@
 #include <iostream>
 #include <boost/algorithm/string.hpp>
 #include "data/stockbaseinfo.h"
+#include <boost/chrono.hpp>
 
 DataCenter* DataCenter::dataCenter = new DataCenter();
 
@@ -31,6 +33,14 @@ DataCenter::DataCenter() {
 DataCenter::~DataCenter() {
     if(defaultDatabase.isOpen())
         defaultDatabase.close();
+}
+
+void DataCenter::executeDel(QString tableName, QString wherePart, QSqlDatabase database) {
+    QSqlQuery query(database);
+    QString sql;
+    sql.append("delete from ").append(tableName).append("where ").append(wherePart);
+    query.prepare(sql);
+    query.exec();
 }
 
 StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
@@ -64,7 +74,7 @@ StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
     return &kInfoMap[ts_code];
 }
 
-std::vector<StockBaseInfo> DataCenter::getStockList() noexcept {
+std::vector<StockBaseInfo> DataCenter::getStockList(QSqlDatabase& database) noexcept {
     std::vector<StockBaseInfo> finalResult;
     executeQuery("select * from stock_list", [&finalResult](QSqlQuery& query) -> void {
         while(query.next()) {
@@ -75,7 +85,7 @@ std::vector<StockBaseInfo> DataCenter::getStockList() noexcept {
             info.industry = query.value("industry").toString();
             finalResult.push_back(info);
         }
-    });
+    }, database);
 
     return finalResult;
 }
@@ -84,10 +94,11 @@ std::vector<StockBaseInfo> DataCenter::getStockList() noexcept {
  * 根据传入参数获取数据库当中存储的日交易信息
  * :param: ts_code 股票代码，例如000001.SZ
  */
-StockBatchInfo DataCenter::getStockDayInfo(const std::string& ts_code) noexcept {
+StockBatchInfo DataCenter::getStockDayInfo(const std::string& ts_code, QSqlDatabase& database, std::string spe_filter) noexcept {
     StockBatchInfo finalResult;
-    std::string sql("select stock_base_info.*,name from stock_base_info join stock_list where ts_code=?");
-    QSqlQuery query;
+    std::string sql("select stock_base_info.*,name from stock_base_info join stock_list on stock_list.ts_code=stock_base_info.ts_code where stock_base_info.ts_code=?");
+    sql.append(spe_filter);
+    QSqlQuery query(database);
     query.prepare(QString::fromStdString(sql));
     query.addBindValue(QString::fromStdString(ts_code));
     query.exec();
@@ -103,13 +114,15 @@ StockBatchInfo DataCenter::getStockDayInfo(const std::string& ts_code) noexcept 
         info.high = query.value("high").toFloat();
         info.open = query.value("open").toFloat();
         info.close = query.value("close").toFloat();
+        info.pct_chg = query.value("pct_chg").toFloat();
         info.tradeDate = query.value("trade_date").toDate();
+        finalResult.info_list.push_back(info);
     }
     return finalResult;
 }
 
-void DataCenter::executeQuery(QString querySql, std::function<void (QSqlQuery&)> callback) {
-    QSqlQuery query;
+void DataCenter::executeQuery(QString querySql, std::function<void (QSqlQuery&)> callback, QSqlDatabase database) {
+    QSqlQuery query(database);
     query.prepare(querySql);
     query.exec();
     callback(query);
@@ -166,7 +179,8 @@ StockIndexBatchInfo DataCenter::getStockIndexInfo(std::string& code) {
     return info;
 }
 
-void DataCenter::executeInsert(std::string tableName, std::vector<std::string>& columns, std::vector<QVariantList*> values) {
+void DataCenter::executeInsert(std::string tableName, std::vector<std::string>& columns, std::vector<QVariantList*> values,
+                               QSqlDatabase database) {
     if(columns.size() == 0 || values.size() != columns.size()) {
         return;
     }
@@ -182,10 +196,12 @@ void DataCenter::executeInsert(std::string tableName, std::vector<std::string>& 
     }
     sql.append("?)");
 
-    QSqlQuery tempQuery;
+    QSqlQuery tempQuery(QString::fromStdString(sql), database);
     for(size_t i = 0;i < values.size();i++)
         tempQuery.addBindValue(*values[i]);
-    tempQuery.execBatch();
+    if(!tempQuery.execBatch()) {
+        qDebug() << tempQuery.lastError();
+    }
 
 }
 
@@ -212,11 +228,11 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         // 将sina当中获取的格式转换为目标格式：000001.SZ
         if(realCode.find("sz") == std::string::npos) {
             realCode = std::string(realCode.substr(2, 6));
-            realCode.append(".SH");
+            realCode.append(".SH_index");
         }
         else {
             realCode = std::string(realCode.substr(2, 6));
-            realCode.append(".SZ");
+            realCode.append(".SZ_index");
         }
 
         if(instance.idToConMapMap[currId].find(realCode) != instance.idToConMapMap[currId].end()) {
@@ -266,7 +282,7 @@ void DataCenter::startFetchIndexInfo() {
         while(qryRst.next()) {
             vector.push_back(qryRst.value("ts_code").toString());
         }
-    });
+    }, defaultDatabase);
 
     // 将拉取分时数据的任务分配为多个线程
     // 每个线程分配330个股票拉取，计算一下线程的数量

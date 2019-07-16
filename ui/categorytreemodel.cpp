@@ -174,7 +174,7 @@ CategoryTreeModel::CategoryTreeModel(QObject *parent): QAbstractItemModel(parent
     DataCenter& dataCenter = DataCenter::getInstance();
     dataCenter.executeQuery("select * from ana_category", [this](QSqlQuery& query) -> void {
         this->rootItem->initByDataResult(query);
-    });
+    }, QSqlDatabase());
 }
 //! [1]
 

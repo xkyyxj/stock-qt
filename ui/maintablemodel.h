@@ -18,11 +18,11 @@ public:
 
     void setFilter(QString _filter);
     void setTableName(QString _tableName);
-    void setSelectColumns(QVector<QString> selectColumns);
+    void setSelectColumns(std::vector<QString> selectColumns);
 
     void selectData();
 
-    void setDisplayHeadInfo(QVector<QString>&);
+    void setDisplayHeadInfo(std::vector<QString>&);
 
     void setPrimaryKey(QString& key);
 
@@ -35,11 +35,11 @@ public slots:
 
 private:
     QVector<QVector<QVariant>> tableData;
-    QVector<QString> selectColumns;
+    std::vector<QString> selectColumns;
     QString tableName;
     QString filter;
     DataCenter* dataCenter;
-    QVector<QString> displayHead;
+    std::vector<QString> displayHead;
 
     // 指定当前的主键是什么
     QString primaryKey;

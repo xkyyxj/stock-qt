@@ -31,6 +31,8 @@ private slots:
 public slots:
     void treeNodeSelected(const QItemSelection &selected, const QItemSelection &deselected);
 
+    void startCalculate();
+
 private:
     Ui::MainWindow *ui;
     //QSqlRelationalTableModel* tableModel;

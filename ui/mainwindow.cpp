@@ -6,6 +6,11 @@
 #include <QVector>
 #include <QItemSelectionModel>
 #include <QInputDialog>
+#include "calculator.h"
+
+void MainWindow::startCalculate() {
+    Calculator::startCalcualte();
+}
 
 void MainWindow::initTableModel() {
     /*QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "db");
@@ -26,18 +31,20 @@ void MainWindow::initTableModel() {
     tableModel->setHeaderData(2, Qt::Horizontal, tr("pk11"));
     tableModel->select();*/
     DataCenter& dataCenter = DataCenter::getInstance();
-    QVector<QString> selectColumns;
+    std::vector<QString> selectColumns;
     selectColumns.push_back("ana_category_detail.ts_code");
     tableModel = new MainTableModel(&dataCenter, this);
     tableModel->setTableName("ana_category_detail join stock_list on stock_list.ts_code=ana_category_detail.ts_code");
     tableModel->setSelectColumns(selectColumns);
-    QVector<QString> displayHead;
-    displayHead.push_front("编码");
+    std::vector<QString> displayHead;
+    displayHead.push_back("编码");
     tableModel->setDisplayHeadInfo(displayHead);
 }
 
 void MainWindow::initMenuAction() {
-
+    // 计算按钮
+    QAction* calculateAction = ui->actioncalculate;
+    connect(calculateAction, &QAction::triggered, this, &MainWindow::startCalculate);
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -45,6 +52,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow), tableModel()
 {
     ui->setupUi(this);
+
+    // 初始化按钮控制
+    initMenuAction();
 
     //构建树结构
     CategoryTreeModel* categoryModel = new CategoryTreeModel();
@@ -97,9 +107,36 @@ void MainWindow::treeNodeSelected(const QItemSelection &selected, const QItemSel
     QVariant varData = index.data(Category::IDRole);
     QString pkField = varData.toString();
 
+    // 查询一下是哪张表
+    QString tableName, pk_tablemeta;
+    DataCenter& instance = DataCenter::getInstance();
+    QString queryTableName("select table_name, ana_category.pk_tablemeta from ana_category join table_meta on ana_category.pk_tablemeta="
+                  "table_meta.pk_tablemeta where pk_category='");
+    queryTableName.append(pkField).append("'");
+    instance.executeQuery(queryTableName, [&tableName, &pk_tablemeta](QSqlQuery& query) -> void {
+        while(query.next()) {
+            tableName = query.value("table_name").toString();
+            pk_tablemeta = query.value("pk_tablemeta").toString();
+        }
+    }, QSqlDatabase());
+
+    std::vector<QString> selectedColumns, tableHead;
+    QString tableDetailInfoQry("select * from table_column where pk_tablemeta='");
+    tableDetailInfoQry.append(pk_tablemeta).append("'");
+    instance.executeQuery(tableDetailInfoQry, [&selectedColumns, &tableHead](QSqlQuery& query) -> void {
+        while(query.next()) {
+            selectedColumns.push_back(query.value("column_name").toString());
+            tableHead.push_back(query.value("display_name").toString());
+        }
+    }, QSqlDatabase());
+
     // 通知表格model进行数据更新
-    tableModel->setFilter("where pk_category='" + pkField + "'");
-    tableModel->selectData();
+    if(tableName.size() > 0) {
+        tableModel->setTableName(tableName);
+        tableModel->setSelectColumns(selectedColumns);
+        tableModel->setDisplayHeadInfo(tableHead);
+        tableModel->selectData();
+    }
 }
 
 void MainWindow::setFetchIndexDelta() {
