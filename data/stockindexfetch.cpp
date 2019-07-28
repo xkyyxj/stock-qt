@@ -1,15 +1,17 @@
-﻿#include "stockindexfetch.h"
-
-// 定义所有的Boost库都采用动态链接的方式进行链接
+﻿// 定义所有的Boost库都采用动态链接的方式进行链接
 #define BOOST_ALL_DYN_LINK
+#define BOOST_CHRONO_VERSION 2
 #include <boost/asio/basic_streambuf.hpp>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/chrono/chrono_io.hpp>
 
 #include <iostream>
 //#include <zlib.h>
 #include <ctime>
+
+#include "stockindexfetch.h"
 
 // 两次获取股票基础数据之间的时间价格不少于2000毫秒
 static const long TWO_FETCH_DELTA_MILI = 2000;
@@ -18,8 +20,23 @@ static const long TWO_FETCH_DELTA_MILI = 2000;
 //1000
 static int SYNC_TO_REDIS_THRESHOLD = 10;
 
+static void copyTmStruct(struct tm& target, tm* origin) {
+    target.tm_min = origin->tm_min;
+    target.tm_mon = origin->tm_mon;
+    target.tm_sec = origin->tm_sec;
+    target.tm_hour = origin->tm_hour;
+    target.tm_mday = origin->tm_mday;
+    target.tm_wday = origin->tm_wday;
+    target.tm_yday = origin->tm_yday;
+    target.tm_year = origin->tm_year;
+    target.tm_zone = origin->tm_zone;
+    target.tm_isdst = origin->tm_isdst;
+    target.tm_gmtoff = origin->tm_gmtoff;
+}
+
 StockIndexFetch::StockIndexFetch(const StockIndexFetch& origin): context(),socket(context) {
     this->codes = origin.codes;
+    initStratEndTimeP();
     this->writeIndexInfo = origin.writeIndexInfo;
     fetchTick = origin.fetchTick;
     // 初始化需要查询的URL列表
@@ -36,7 +53,7 @@ StockIndexFetch::StockIndexFetch(const StockIndexFetch& origin): context(),socke
         tempCode = tempCode.mid(0, 8);
         tempStr.append(tempCode).append(",");
 
-        //330支股票作为一个轮询
+        //330支股票作为一个轮询，多了的话ＵＲＬ太长了，会被拒绝访问
         if(count == 329) {
             urlTargetVec.push_back(tempStr);
             tempStr = "/list=";
@@ -57,6 +74,8 @@ StockIndexFetch::StockIndexFetch(const StockIndexFetch& origin): context(),socke
 
 StockIndexFetch::StockIndexFetch(QVector<QString>&& codes): context(),socket(context) {
     this->codes = codes;
+    initStratEndTimeP();
+
     // 初始化需要查询的URL列表
     int count = 0;
     fetchTick = 0;
@@ -72,7 +91,7 @@ StockIndexFetch::StockIndexFetch(QVector<QString>&& codes): context(),socket(con
         tempCode = tempCode.mid(0, 8);
         tempStr.append(tempCode).append(",");
 
-        //330支股票作为一个轮询
+        //330支股票作为一个轮询，多了的话ＵＲＬ太长了，会被拒绝访问
         if(count == 329) {
             urlTargetVec.push_back(tempStr);
             tempStr = "/list=";
@@ -97,13 +116,8 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
     writeIndexInfo = fun;
     fetchTick = 0;
 
-    // 初始化一下成交时间段
-    boost::gregorian::date currDate(boost::gregorian::day_clock::local_day());
-    std::string currDateStr = boost::gregorian::to_iso_extended_string(currDate);
-    std::string upBeginTime(currDateStr);
-    upBeginTime.append(" 09:30:00");
-    //strYtime()
-    //upBeginTime = boost
+    initStratEndTimeP();
+
     // 初始化需要查询的URL列表
     int count = 0;
     QString tempStr("/list=");
@@ -118,7 +132,7 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
         tempCode = tempCode.mid(0, 8);
         tempStr.append(tempCode).append(",");
 
-        //330支股票作为一个轮询
+        //330支股票作为一个轮询，多了的话ＵＲＬ太长了，会被拒绝访问
         if(count == 329) {
             urlTargetVec.push_back(tempStr);
             tempStr = "/list=";
@@ -136,6 +150,54 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
     currFetchTargetIndex = 0;
 }
 
+/**
+ * 初始化开市以及结束交易的时间点
+ */
+void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
+    using namespace boost::chrono;
+    system_clock::time_point p = system_clock::now();
+    // 如果需要延后一天的话，时间戳加上２４小时
+    isNextDay ? p += hours(24) : p;
+
+    // 初始化一下开市时间等
+    std::time_t currTimeT = system_clock::to_time_t(p);
+    struct tm* currTimeP = std::localtime(&currTimeT);
+
+    //上午开市时间
+    struct tm temp_tm;
+    copyTmStruct(temp_tm, currTimeP);
+    temp_tm.tm_hour = 9;
+    temp_tm.tm_min = 30;
+    temp_tm.tm_sec = 0;
+    std::time_t time_t = std::mktime(&temp_tm);
+    system_clock::time_point tempPoint = system_clock::from_time_t(time_t);
+    upBeginTime = time_point_cast<milliseconds>(tempPoint);
+
+    //　上午结束时间
+    temp_tm.tm_hour = 11;
+    temp_tm.tm_min = 30;
+    temp_tm.tm_sec = 0;
+    time_t = std::mktime(&temp_tm);
+    tempPoint = system_clock::from_time_t(time_t);
+    upEndTime = time_point_cast<milliseconds>(tempPoint);
+
+    //　下午开市时间
+    temp_tm.tm_hour = 13;
+    temp_tm.tm_min = 00;
+    temp_tm.tm_sec = 0;
+    time_t = std::mktime(&temp_tm);
+    tempPoint = system_clock::from_time_t(time_t);
+    downBeginTime = time_point_cast<milliseconds>(tempPoint);
+
+    //　下午结束时间
+    temp_tm.tm_hour = 15;
+    temp_tm.tm_min = 0;
+    temp_tm.tm_sec = 0;
+    time_t = std::mktime(&temp_tm);
+    tempPoint = system_clock::from_time_t(time_t);
+    downEndTime = time_point_cast<milliseconds>(tempPoint);
+}
+
 [[noreturn]] void StockIndexFetch::operator()() {
     using namespace boost::this_thread;
     using namespace boost::chrono;
@@ -144,12 +206,10 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
     boost::chrono::system_clock::time_point p = boost::chrono::system_clock::now();
     milis_t preFetchTime = boost::chrono::time_point_cast<boost::chrono::milliseconds>(p);
 
-    // 设计为一个死循环
     for(;;) {
-        std::string tempS = boost::lexical_cast<std::string>(boost::this_thread::get_id());
         milis_t currTime = time_point_cast<milliseconds>(system_clock::now());
         milliseconds time_delta = currTime - preFetchTime;
-        // 两次获取股票实时数据之间的时间间隔少于2000毫秒
+        // 两次获取股票实时数据之间的时间间隔不少于2000毫秒
         if(time_delta.count() < TWO_FETCH_DELTA_MILI) {
             long long target_count = TWO_FETCH_DELTA_MILI - time_delta.count();
             milliseconds target_delta(target_count);
@@ -206,12 +266,10 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
         // 调用回调函数处理获取的实时信息（并且通知是否刷新Redis）
         writeIndexInfo(ret_result, !(fetchTick++ < SYNC_TO_REDIS_THRESHOLD ? true : fetchTick = 0));
 
-        //std::cout << boost::this_thread::get_id() << std::endl;
         if(ret_result.size() == 0) {
             std::cout << "some thing wrong%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
             std::cout << urlTargetVec[currFetchTargetIndex - 1].toStdString() << std::endl;
         }
-        //std::cout << ret_result << std::endl;
 
 
         //最后修正一下currFetchTargetIndex，以防数组越界
@@ -220,6 +278,19 @@ StockIndexFetch::StockIndexFetch(QVector<QString>& codes,
         }
 
         preFetchTime = currTime;
+
+        // 判定一下是否交易时间，否则的话，线程睡眠
+        std::cout << time_fmt(boost::chrono::timezone::local) << time_point_cast<seconds>(upBeginTime) << std::endl;
+        if(currTime < upBeginTime) {
+            sleep_until(upBeginTime);
+        }
+        else if(currTime > upEndTime && currTime < downBeginTime) {
+            sleep_until(downBeginTime);
+        }
+        else if(currTime > downBeginTime) {
+            initStratEndTimeP(true);
+            sleep_until(upBeginTime);
+        }
     }
 }
 

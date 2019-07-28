@@ -54,6 +54,13 @@ void Calculator::findVWaveStock(int checkDays) noexcept {
     DataCenter& instance = DataCenter::getInstance();
     boost::chrono::system_clock::time_point now = boost::chrono::system_clock::now();
 
+    // 计算之前首先先把要生成天的数据删掉
+    QDate date = QDate::currentDate();
+    QString dateStr = date.toString("yyyy-MM-dd");
+    QString delWhere(" date='");
+    delWhere.append(dateStr).append("'");
+    instance.executeDel("v_wave", delWhere, defaultDatabase);
+
     // 下降过程当中必须是阴线，并且最后一根阳线收盘价高于前一天开盘价
     std::vector<VWave> downGreenUpHigh;
     // 下降过程当中必须是阴线，并且最后一根阳线收盘价可低于前一天开盘价
@@ -152,6 +159,13 @@ void Calculator::findContinueUpStock(int up_days) noexcept {
     DataCenter& instance = DataCenter::getInstance();
     std::vector<StockBaseInfo> stockList = instance.getStockList(defaultDatabase);
     std::string spe_fileter(" order by trade_date desc limit 40");
+
+    // 计算之前首先先把要生成天的数据删掉
+    QDate date = QDate::currentDate();
+    QString dateStr = date.toString("yyyy-MM-dd");
+    QString delWhere(" date='");
+    delWhere.append(dateStr).append("'");
+    instance.executeDel("quick_up", delWhere, defaultDatabase);
 
     // higher_c_o: 最后一天收盘价比前一天的收盘价或者开盘价当中较高的更高的结果
     // higher_max: 最后一天收盘价比前一天的最高价更高的结果集

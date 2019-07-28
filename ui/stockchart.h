@@ -28,6 +28,7 @@ public:
 
 public slots:
     void stockInfoChanged();
+    void infoTypeChanged(int);
 
 signals:
     void mouseOnChanged(StockInfo);

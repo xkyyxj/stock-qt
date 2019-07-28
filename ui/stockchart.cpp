@@ -1,5 +1,6 @@
 ﻿#include "stockchart.h"
 #include <iostream>
+#include <cmath>
 
 static const int MIN_K_LINE_WIDTH = 6;
 static const int DEFAULT_K_LINE_WIDTH = 20;
@@ -62,6 +63,7 @@ static void paintSingleKLine(QPainter* painter, int x, int y, int width, int hei
     float main_delta = info.open > info.close ? info.open - info.close : info.close - info.open;
     float main_pct = main_delta / delta;
     int main_start_y = up_end_y, mainHeight = static_cast<int>(main_pct * height);
+    mainHeight = mainHeight == 0 ? 1 : mainHeight; //　确保主体部分有内容
     QRect mainRect(x + KLINE_PADDING, main_start_y, width - 2 * KLINE_PADDING, mainHeight);
     painter->drawRect(mainRect);
     if(info.close < info.open) {
@@ -109,6 +111,12 @@ void StockChart::setModel(StockChartModel *_model) {
     connect(model, SIGNAL(dataChanged()), this, SLOT(stockInfoChanged()));
 }
 
+void StockChart::infoTypeChanged(int type) {
+    std::cout << type << std::endl;
+
+    currDisplayType = static_cast<DisplayType>(type);
+    update();
+}
 
 void StockChart::stockInfoChanged() {
     isFirstRender = true;
@@ -228,47 +236,253 @@ void StockChart::paintKLine(QPainter* painter, QPaintEvent *event) {
 }
 
 void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
-    StockIndexBatchInfo* indexInfo = model->getCurrStockIndexInfo();
+    QPen pen;
+    QColor color;
+    color.setRgb(217, 58, 24);
+    pen.setColor(color);
+    pen.setWidth(2);
+    painter->setPen(pen);
+    painter->setRenderHint(QPainter::Antialiasing);
+
+    StockIndexBatchInfo indexInfo = model->getCurrStockIndexInfo();
 
     // 沪深两市总交易时长（单位：秒）
     int totalSeconds = 4 * 60 * 60;
 
     // 开市时间
     QString today = QDateTime::currentDateTime().toString("yyyy-MM-dd");
-    const QDateTime moringStartTime = QDateTime::fromString(today + " 09:30:00");
-    const QDateTime afternooneStartTime = QDateTime::fromString(today + " 13:00:00");
+    const QDateTime morningStartTime = QDateTime::fromString(today + " 09:30:00",
+                                                            "yyyy-MM-dd HH:mm:ss");
+    const QDateTime morningEndTime = QDateTime::fromString(today + " 11:30:00",
+                                                            "yyyy-MM-dd HH:mm:ss");
+    const QDateTime afternoonStartTime = QDateTime::fromString(today + " 13:00:00",
+                                                                "yyyy-MM-dd HH:mm:ss");
+    const QDateTime afternoonEndTime = QDateTime::fromString(today + " 15:00:00",
+                                                                "yyyy-MM-dd HH:mm:ss");
 
-    // 统计一下最大和最小价差
-    float maxPrice = 0, minPrice = 100000, delta = 0;
-    for(int i = 0;i < indexInfo->infoList.size();i++) {
-        maxPrice = indexInfo->infoList[i].price > maxPrice ? indexInfo->infoList[i].price : maxPrice;
-        minPrice = indexInfo->infoList[i].price > minPrice ? minPrice : indexInfo->infoList[i].price;
-    }
-    delta = maxPrice - minPrice;
+    // 前一天的收盘价
+    double preDayClose = indexInfo.pre_close;
+    size_t lastIndex=  indexInfo.info_list.size() - 1;
+    double minPrice = indexInfo.info_list[lastIndex].
+            mainContent[StockIndexBatchInfo::CURR_MIN];
+    double maxPrice = indexInfo.info_list[lastIndex].
+            mainContent[StockIndexBatchInfo::CURR_MIN];
+    double absMax = fabs(minPrice) > fabs(maxPrice) ? fabs(minPrice) :
+                                                      fabs(maxPrice);
+    double max_pct = (absMax - preDayClose) / preDayClose;
+    double delta = 2 * absMax;
+    // 将最大波动百分比均分成６份，然后上下对等来画
+    double per_pct = max_pct / 6;
+    //　分时图主体显示区宽度
+    int mainContentWidth = event->rect().width() - PRICE_AREA_WIDTH;
 
-    int preX = 0, preY = 0; // 上一根线条的结束点
-    for(int i = 1;i < indexInfo->infoList.size();i++) {
-        int y = static_cast<int>((maxPrice - indexInfo->infoList[i].price) / delta * event->rect().height());
+    // 先绘制主体部分
+    int preX = -1, preY = -1; // 上一根线条的结束点
+    for(size_t i = 1;i < indexInfo.info_list.size();i++) {
+        double currPrice = indexInfo.info_list[i].mainContent[StockIndexBatchInfo::CURR_PRICE];
+        double toTop = currPrice < 0 ? fabs(currPrice) + absMax : absMax - currPrice;
+        int y = static_cast<int>(toTop / delta * event->rect().height());
 
         // 计算一下经历了多长的交易时间(午休时间不计算在内)
         int deltaTime = 0;
         // 上午交易时间段内
-        if(indexInfo->infoList[i].time < afternooneStartTime) {
-            deltaTime += indexInfo->infoList[i].time.secsTo(moringStartTime);
+        if(indexInfo.info_list[i].time > morningStartTime &&
+                indexInfo.info_list[i].time < morningEndTime) {
+            deltaTime += morningStartTime.secsTo(indexInfo.info_list[i].time);
         }
         // 下午交易时间段内
+        else if(indexInfo.info_list[i].time > afternoonStartTime &&
+                indexInfo.info_list[i].time < afternoonEndTime){
+            deltaTime += totalSeconds / 2 + afternoonStartTime.secsTo(indexInfo.info_list[i].time);
+        }
         else {
-            deltaTime += totalSeconds / 2 +  indexInfo->infoList[i].time.secsTo(afternooneStartTime);
+            break;
         }
 
-        int x = deltaTime / totalSeconds * event->rect().width();
-
+        int x = static_cast<int>(deltaTime / static_cast<double>(totalSeconds)
+                                 * mainContentWidth);
+        if(preX == -1) {
+            //　第一个点，不用画了
+            preX = x;
+            preY = y;
+            continue;
+        }
         QLine tempLine(preX, preY, x, y);
         painter->drawLine(tempLine);
         preX = x;
         preY = y;
     }
+
+    // 然后绘制右边的百分比显示区以及窗格系统
+    QFont priceFont;
+    priceFont.setPointSize(FONT_SIZE);
+    painter->setFont(priceFont);
+    QLine rightEndLine(mainContentWidth, 0, mainContentWidth, event->rect().height());
+    painter->drawLine(rightEndLine);
+
+    int eachPriceLevelHeight = event->rect().height() / 13;
+    //　绘制窗格系统，　重置下画笔颜色
+    QColor lineColor;
+    lineColor.setRgb(206, 200, 200);
+    pen.setColor(lineColor);
+    painter->setPen(pen);
+    for(int i = 0;i < 13;i++) {
+        QLine tempLine(0, eachPriceLevelHeight * i, mainContentWidth,
+                       eachPriceLevelHeight * i);
+        painter->drawLine(tempLine);
+    }
+
+    //　绘制涨跌幅百分显示区
+    pen.setColor(color);
+    painter->setPen(pen);
+    for(int i = 0;i < 13;i++) {
+        double currPct = max_pct - per_pct * i;
+        painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT,
+                          FONT_SIZE + eachPriceLevelHeight * i,
+                          QString::fromStdString(std::to_string(currPct).substr(0, 5)));
+    }
+
+    // 绘制一下当前鼠标所在K线的位置，加一个十字线，贯穿整个窗口
+    // 处理一下，避免垂直的线越过K线显示区，到了右边价格显示区
+    int pointX = currMouseP.x() > mainContentWidth ? mainContentWidth : currMouseP.x();
+    QLine horizonLine(0, currMouseP.y(), mainContentWidth, currMouseP.y());
+    painter->drawLine(horizonLine);
+
+    QLine verticLine(pointX, 0, pointX, event->rect().height());
+    painter->drawLine(verticLine);
+
+    // 绘制一下当前的价格百分比
+    int priceBackGroudHeight = FONT_SIZE + 4;
+    int halfHeight = event->rect().height() / 2;
+    float mouseOnPct = currMouseP.y() / halfHeight * max_pct;
+    mouseOnPct = mouseOnPct > max_pct ? -(mouseOnPct - max_pct) : mouseOnPct;
+    QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
+    painter->drawRect(mouseOnPriceBack);
+    QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);
+    painter->fillRect(priceFillBack, QColor(184, 243, 144));
+    painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT, currMouseP.y(),
+                      QString::fromStdString(std::to_string(mouseOnPct).substr(0, 5)));
+
 }
+
+//void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
+
+//    QPen pen;
+//    QColor color;
+//    color.setRgb(217, 58, 24);
+//    pen.setColor(color);
+//    pen.setWidth(2);
+//    painter->setPen(pen);
+//    painter->setRenderHint(QPainter::Antialiasing);
+
+//    StockIndexBatchInfo indexInfo = model->getCurrStockIndexInfo();
+
+//    // 沪深两市总交易时长（单位：秒）
+//    int totalSeconds = 4 * 60 * 60;
+
+//    // 开市时间
+//    QString today = QDateTime::currentDateTime().toString("yyyy-MM-dd");
+//    const QDateTime morningStartTime = QDateTime::fromString(today + " 09:30:00",
+//                                                            "yyyy-MM-dd HH:mm:ss");
+//    const QDateTime morningEndTime = QDateTime::fromString(today + " 11:30:00",
+//                                                            "yyyy-MM-dd HH:mm:ss");
+//    const QDateTime afternoonStartTime = QDateTime::fromString(today + " 13:00:00",
+//                                                                "yyyy-MM-dd HH:mm:ss");
+//    const QDateTime afternoonEndTime = QDateTime::fromString(today + " 15:00:00",
+//                                                                "yyyy-MM-dd HH:mm:ss");
+
+//    // 统计一下最大和最小价差
+//    float maxPrice = 0, minPrice = 100000, delta = 0;
+//    if(indexInfo.info_list.size() > 0) {
+//        /*StockIndexBatchInfo::SingleIndexInfo lastInfo = indexInfo.info_list[indexInfo.info_list.size() - 1];
+//        double* mainContent = lastInfo.mainContent;
+//        double tempmax = mainContent[1];
+//        float tempMax = (float)(tempmax);*/
+//        maxPrice = static_cast<float>(indexInfo.info_list[indexInfo.info_list.size() - 1].
+//                mainContent[1]);
+//        minPrice = static_cast<float>(indexInfo.info_list[indexInfo.info_list.size() - 1].
+//                mainContent[StockIndexBatchInfo::CURR_MIN]);
+//    }
+//    delta = maxPrice - minPrice;
+
+//    int preX = -1, preY = -1; // 上一根线条的结束点
+//    for(size_t i = 1;i < indexInfo.info_list.size();i++) {
+//        double currPrice = indexInfo.info_list[i].mainContent[StockIndexBatchInfo::CURR_PRICE];
+//        int y = static_cast<int>((maxPrice - currPrice) / delta * event->rect().height());
+
+//        // 计算一下经历了多长的交易时间(午休时间不计算在内)
+//        int deltaTime = 0;
+//        // 上午交易时间段内
+//        if(indexInfo.info_list[i].time > morningStartTime &&
+//                indexInfo.info_list[i].time < morningEndTime) {
+//            deltaTime += morningStartTime.secsTo(indexInfo.info_list[i].time);
+//        }
+//        // 下午交易时间段内
+//        else if(indexInfo.info_list[i].time > afternoonStartTime &&
+//                indexInfo.info_list[i].time < afternoonEndTime){
+//            deltaTime += totalSeconds / 2 + afternoonStartTime.secsTo(indexInfo.info_list[i].time);
+//        }
+//        else {
+//            return;
+//        }
+
+//        int x = static_cast<int>(deltaTime / static_cast<double>(totalSeconds)
+//                                 * event->rect().width());
+//        if(preX == -1) {
+//            //　第一个点，不用画了
+//            preX = x;
+//            preY = y;
+//            continue;
+//        }
+//        QLine tempLine(preX, preY, x, y);
+//        painter->drawLine(tempLine);
+//        preX = x;
+//        preY = y;
+//    }
+
+//    // 在右侧绘制一个价格显示区
+//    // 最右侧绘制一个显示栏，用于显示价格(分成四个等份)
+//    /*QFont priceFont;
+//    priceFont.setPointSize(FONT_SIZE);
+//    painter->setFont(priceFont);
+//    QLine rightEndLine(mainContentWidth, 0, mainContentWidth, event->rect().height());
+//    painter->drawLine(rightEndLine);
+
+//    int eachPriceLevelHeight = event->rect().height() / 4;
+//    for(int i = 0;i < 4;i++) {
+//        float curPrice = maxPrice - minMaxDelta *
+//                (FONT_SIZE + eachPriceLevelHeight * i) / event->rect().height();
+//        painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT,
+//                          FONT_SIZE + eachPriceLevelHeight * i,
+//                          QString::fromStdString(std::to_string(curPrice).substr(0, 5)));
+//    }
+
+//    // 绘制一下当前鼠标所在K线的位置，加一个十字线，贯穿整个窗口
+//    int kLineNum = currMouseP.x() / eachLineWidth;
+//    int pointX = 0;
+//    // 处理一下，避免垂直的线越过K线显示区，到了右边价格显示区
+//    if(kLineNum > (endIndex - startIndex)) {
+//        pointX = mainContentWidth;
+//    }
+//    else {
+//        pointX = kLineNum * eachLineWidth + eachLineWidth / 2;
+//    }
+//    QLine horizonLine(0, currMouseP.y(), mainContentWidth, currMouseP.y());
+//    painter->drawLine(horizonLine);
+
+//    QLine verticLine(pointX, 0, pointX, event->rect().height());
+//    painter->drawLine(verticLine);
+
+//    // 绘制一下当前的价格
+//    int priceBackGroudHeight = FONT_SIZE + 4;
+//    float mouseOnPrice = maxPrice - minMaxDelta * currMouseP.y() / event->rect().height();
+//    QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
+//    painter->drawRect(mouseOnPriceBack);
+//    QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);
+//    painter->fillRect(priceFillBack, QColor(184, 243, 144));
+//    painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT, currMouseP.y(),
+//                      QString::fromStdString(std::to_string(mouseOnPrice).substr(0, 5)));*/
+//}
 
 void StockChart::mouseMoveEvent(QMouseEvent *event) {
     currMouseP = event->pos();

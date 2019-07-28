@@ -31,12 +31,14 @@ CONFIG += c++11
 
 SOURCES += \
         calculator.cpp \
+        indexanalyzer.cpp \
         ui/categorytreemodel.cpp \
         data/datacenter.cpp \
         data/datafetch.cpp \
         main.cpp \
         ui/maintablemodel.cpp \
         ui/mainwindow.cpp \
+        utils/filemanager.cpp \
         utils/rediscachetools.cpp \
         ui/stockchart.cpp \
         ui/stockchartmodel.cpp \
@@ -49,6 +51,7 @@ HEADERS += \
         calculator.h \
         category.h \
         data/stockbaseinfo.h \
+        indexanalyzer.h \
         ui/categorytreemodel.h \
         commonenum.h \
         data/datacenter.h \
@@ -56,6 +59,7 @@ HEADERS += \
         excpetions.h \
         ui/maintablemodel.h \
         ui/mainwindow.h \
+        utils/filemanager.h \
         utils/rediscachetools.h \
         ui/stockchart.h \
         ui/stockchartmodel.h \

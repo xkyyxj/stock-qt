@@ -16,13 +16,20 @@ public:
 class StockIndexBatchInfo {
 public:
 
+    enum {
+        CURR_PRICE, CURR_MAX, CURR_MIN, BUY_ONE_P, SOLD_ONE_P,
+        DEAL
+    };
+
     struct SingleIndexInfo {
         QDateTime time;
-        float price;
+        double mainContent[27];
     };
 
     QString ts_code, ts_name;
-    QVector<SingleIndexInfo> infoList;
+    float pre_close, today_open;
+
+    std::vector<SingleIndexInfo> info_list;
 
 public:
     void decodeFromStrForSina(QString&);

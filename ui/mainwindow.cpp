@@ -7,6 +7,7 @@
 #include <QItemSelectionModel>
 #include <QInputDialog>
 #include "calculator.h"
+#include "utils/zlibcompress.h"
 
 void MainWindow::startCalculate() {
     Calculator::startCalcualte();
@@ -51,6 +52,35 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow), tableModel()
 {
+    // 测试一下ｚｌｉｂ关于压缩的错误(测试正确后，发现花费了十分钟执行下面的循环)
+    /*QDateTime currTime = QDateTime::currentDateTime();
+    std::cout << "begin" << std::endl;
+    std::cout << currTime.toString("yyyy-MM-dd HH:mm:ss").toStdString() << std::endl;
+    zlib::ZLibCompress compress;
+    StockIndexBatchInfo batchInfo;
+    for(int i = 0;i < 10000;i++) {
+        StockIndexBatchInfo::SingleIndexInfo singleInfo;
+        batchInfo.info_list.push_back(singleInfo);
+        std::string strInfo = batchInfo.encodeToStr();
+        compress.startCompress();
+        std::vector<unsigned char> rst = compress.endCompress(strInfo);
+
+        // 反解压一下，看下是不是ＯＫ的
+        compress.startDecompress();
+        std::vector<unsigned char> deRst = compress.endDecompress(rst.data(),rst.size());
+        deRst.push_back('\0');
+        unsigned char* realData = deRst.data();
+        char* real_data = reinterpret_cast<char*>(realData);
+        std::string val(real_data);
+        if(!(val.at(0) == '%')) {
+            std::cout << "decompress error!!!:" << i << std::endl;
+        }
+    }
+
+    QDateTime currTime2 = QDateTime::currentDateTime();
+    std::cout << "end" << std::endl;
+    std::cout << currTime2.toString("yyyy-MM-dd HH:mm:ss").toStdString() << std::endl;*/
+
     ui->setupUi(this);
 
     // 初始化按钮控制
@@ -79,16 +109,8 @@ MainWindow::MainWindow(QWidget *parent) :
     // 开始获取股票的实时信息
     dataCenter.startFetchIndexInfo();
 
-    // 尝试网Redis当中写入数据
-    std::string temp_val("6666666");
-    RedisCacheTools tools;
-    bool isOK = tools.writeStrToRedis("123", temp_val);
-    if(isOK) {
-        tools.getBinaryDataFromRedis("123", [](char* val, size_t size) -> void {
-            std::string tempStr(val);
-            std::cout << tempStr << std::endl;
-        });
-    }
+    // 控制下Ｋ线图的切换
+    connect(ui->comboBox, SIGNAL(currentIndexChanged(int)), ui->openGLWidget, SLOT(infoTypeChanged(int)));
 
 }
 
@@ -130,11 +152,17 @@ void MainWindow::treeNodeSelected(const QItemSelection &selected, const QItemSel
         }
     }, QSqlDatabase());
 
+    QDate currDate = QDate::currentDate();
+    QString dateStr = currDate.toString("yyyy-MM-dd");
+    QString filter(" where date='");
+    filter.append(dateStr).append("'");
+
     // 通知表格model进行数据更新
     if(tableName.size() > 0) {
         tableModel->setTableName(tableName);
         tableModel->setSelectColumns(selectedColumns);
         tableModel->setDisplayHeadInfo(tableHead);
+        tableModel->setFilter(filter);
         tableModel->selectData();
     }
 }

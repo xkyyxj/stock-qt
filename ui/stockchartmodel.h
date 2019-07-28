@@ -13,7 +13,7 @@ public:
     StockChartModel();
 
     StockBatchInfo* getCurrStockKInfo();
-    StockIndexBatchInfo* getCurrStockIndexInfo();
+    StockIndexBatchInfo getCurrStockIndexInfo();
 public slots:
     void currSelectdStockChanged(const QModelIndex& index);
 
@@ -22,7 +22,7 @@ signals:
 
 private:
     StockBatchInfo* currSelectedKInfo;
-    StockIndexBatchInfo* currSelectedIndexInfo;
+    StockIndexBatchInfo currSelectedIndexInfo;
 
     void reset();
 

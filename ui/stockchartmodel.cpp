@@ -2,6 +2,7 @@
 #include <QModelIndex>
 #include <iostream>
 #include "data/datacenter.h"
+#include "data/stockindexinfo.h"
 
 StockChartModel::StockChartModel() {
     DataCenter& dataCenter = DataCenter::getInstance();
@@ -24,7 +25,10 @@ void StockChartModel::reset() {
 StockBatchInfo* StockChartModel::getCurrStockKInfo() {
     return currSelectedKInfo;
 }
-StockIndexBatchInfo* StockChartModel::getCurrStockIndexInfo() {
+
+// TODO --此处可能有效率问题？毕竟拷贝的数据量有点大
+StockIndexBatchInfo StockChartModel::getCurrStockIndexInfo() {
     DataCenter& instance = DataCenter::getInstance();
+    currSelectedIndexInfo = instance.getStockIndexInfo("000001.SZ");
     return currSelectedIndexInfo;
 }

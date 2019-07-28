@@ -40,11 +40,16 @@ std::vector<unsigned char> ZLibCompress::compressWithZLibPri(unsigned char* inpu
             throw new ZLibException("输入流错误！");
         }
         // 将输出追加到vector当中
-        finalResult.assign(output, output + 102400 - compressStrm.avail_out);
+        finalResult.insert(finalResult.end(), output, output + 102400 - compressStrm.avail_out);
+        // fixme -- 下面一行如果是重复调用的话，会把finalResult当中原先的内容刷掉
+        //finalResult.assign(output, output + 102400 - compressStrm.avail_out);
     } while (compressStrm.avail_out == 0);
 
     if(ret != Z_STREAM_ERROR) {
         return finalResult;
+    }
+    else {
+        std::cout << "stream error ! " << std::endl;
     }
 
     return std::vector<unsigned char>();
@@ -138,7 +143,8 @@ std::vector<unsigned char> ZLibCompress::decompressDataWithZlib(unsigned char* i
             break;
         }
         // 将输出追加到vector当中
-        finalResult.assign(output, output + 102400 - decompressStrm.avail_out);
+        finalResult.insert(finalResult.end(), output, output + 102400 - decompressStrm.avail_out);
+        //finalResult.assign(output, output + 102400 - decompressStrm.avail_out);
     } while (decompressStrm.avail_out == 0);
 
     if(ret != Z_STREAM_ERROR) {

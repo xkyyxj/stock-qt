@@ -42,6 +42,8 @@ public:
     [[noreturn]] void operator()();
 private:
     void initSocket(const std::string&);
+
+    void initStratEndTimeP(bool = false) noexcept;
 };
 
 #endif // STOCKINDEXFETCHER_H
