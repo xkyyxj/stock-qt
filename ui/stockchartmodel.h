@@ -21,6 +21,7 @@ signals:
     void dataChanged();
 
 private:
+    std::string currSelectedTsCode = "000001.SZ"; //　给个默认值
     StockBatchInfo* currSelectedKInfo;
     StockIndexBatchInfo currSelectedIndexInfo;
 

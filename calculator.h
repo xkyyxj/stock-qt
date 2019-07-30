@@ -1,9 +1,15 @@
 ﻿#ifndef CALCULATOR_H
 #define CALCULATOR_H
+#include <vector>
 #include <QSqlDatabase>
+
+class StockBaseInfo;
 
 class Calculator {
     QSqlDatabase defaultDatabase;
+    std::vector<StockBaseInfo> stockList;
+
+    void initData() noexcept;
 public:
     Calculator() noexcept;
 
@@ -18,6 +24,8 @@ public:
     void operator()() noexcept;
 
     static void startCalcualte() noexcept;
+
+    void findBigWave(int = 10) noexcept;
 };
 
 #endif // CALCULATOR_H

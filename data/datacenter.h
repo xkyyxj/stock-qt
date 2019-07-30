@@ -30,6 +30,14 @@ class DataCenter: public QObject {
 public:
     static DataCenter& getInstance();
 
+    DataCenter(DataCenter&) = delete;
+
+    DataCenter(DataCenter&&) = delete;
+
+    DataCenter& operator=(DataCenter&) = delete;
+
+    DataCenter& operator=(DataCenter&&) = delete;
+
     ~DataCenter();
 
     StockBatchInfo* getStockBatchInfoByTsCode(QString ts_code);

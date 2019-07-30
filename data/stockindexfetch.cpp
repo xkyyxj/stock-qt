@@ -20,20 +20,6 @@ static const long TWO_FETCH_DELTA_MILI = 2000;
 //1000
 static int SYNC_TO_REDIS_THRESHOLD = 10;
 
-static void copyTmStruct(struct tm& target, tm* origin) {
-    target.tm_min = origin->tm_min;
-    target.tm_mon = origin->tm_mon;
-    target.tm_sec = origin->tm_sec;
-    target.tm_hour = origin->tm_hour;
-    target.tm_mday = origin->tm_mday;
-    target.tm_wday = origin->tm_wday;
-    target.tm_yday = origin->tm_yday;
-    target.tm_year = origin->tm_year;
-    target.tm_zone = origin->tm_zone;
-    target.tm_isdst = origin->tm_isdst;
-    target.tm_gmtoff = origin->tm_gmtoff;
-}
-
 StockIndexFetch::StockIndexFetch(const StockIndexFetch& origin): context(),socket(context) {
     this->codes = origin.codes;
     initStratEndTimeP();
@@ -165,9 +151,9 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
 
     //上午开市时间
     struct tm temp_tm;
-    copyTmStruct(temp_tm, currTimeP);
+    temp_tm = *currTimeP;   // 结构体的默认拷贝构造
     temp_tm.tm_hour = 9;
-    temp_tm.tm_min = 30;
+    temp_tm.tm_min = 29;
     temp_tm.tm_sec = 0;
     std::time_t time_t = std::mktime(&temp_tm);
     system_clock::time_point tempPoint = system_clock::from_time_t(time_t);
@@ -175,15 +161,15 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
 
     //　上午结束时间
     temp_tm.tm_hour = 11;
-    temp_tm.tm_min = 30;
+    temp_tm.tm_min = 31;
     temp_tm.tm_sec = 0;
     time_t = std::mktime(&temp_tm);
     tempPoint = system_clock::from_time_t(time_t);
     upEndTime = time_point_cast<milliseconds>(tempPoint);
 
     //　下午开市时间
-    temp_tm.tm_hour = 13;
-    temp_tm.tm_min = 00;
+    temp_tm.tm_hour = 12;
+    temp_tm.tm_min = 59;
     temp_tm.tm_sec = 0;
     time_t = std::mktime(&temp_tm);
     tempPoint = system_clock::from_time_t(time_t);
@@ -191,7 +177,7 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
 
     //　下午结束时间
     temp_tm.tm_hour = 15;
-    temp_tm.tm_min = 0;
+    temp_tm.tm_min = 1;
     temp_tm.tm_sec = 0;
     time_t = std::mktime(&temp_tm);
     tempPoint = system_clock::from_time_t(time_t);
@@ -280,14 +266,14 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
         preFetchTime = currTime;
 
         // 判定一下是否交易时间，否则的话，线程睡眠
-        std::cout << time_fmt(boost::chrono::timezone::local) << time_point_cast<seconds>(upBeginTime) << std::endl;
+        //std::cout << time_fmt(boost::chrono::timezone::local) << time_point_cast<seconds>(upBeginTime) << std::endl;
         if(currTime < upBeginTime) {
             sleep_until(upBeginTime);
         }
         else if(currTime > upEndTime && currTime < downBeginTime) {
             sleep_until(downBeginTime);
         }
-        else if(currTime > downBeginTime) {
+        else if(currTime > downEndTime) {
             initStratEndTimeP(true);
             sleep_until(upBeginTime);
         }

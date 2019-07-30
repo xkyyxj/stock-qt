@@ -76,7 +76,7 @@ StockBatchInfo* DataCenter::getStockBatchInfoByTsCode(QString ts_code) {
 
 std::vector<StockBaseInfo> DataCenter::getStockList(QSqlDatabase& database) noexcept {
     std::vector<StockBaseInfo> finalResult;
-    executeQuery("select * from stock_list", [&finalResult](QSqlQuery& query) -> void {
+    executeQuery("select * from stock_list where market in ('主板','中小板')", [&finalResult](QSqlQuery& query) -> void {
         while(query.next()) {
             StockBaseInfo info;
             info.ts_code = query.value("ts_code").toString();
@@ -241,8 +241,10 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         }
 
         bool is_001 = false;
-        if(realCode == "000001.SZ_index") {
+        if(realCode == "000028.SZ_index") {
             is_001 = true;
+            //std::cout << "running 000028" << std::endl;
+            //std::cout << temp << std::endl;
         }
 
         if(instance.idToConMapMap[currId].find(realCode) != instance.idToConMapMap[currId].end()) {
@@ -252,6 +254,10 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         else {
             std::string emptyStr;
             currIndexInfo = StockIndexBatchInfo::appendEncodeUseSina(emptyStr, temp);
+        }
+
+        if(is_001 && syncToRedis) {
+            //std::cout << currIndexInfo << std::endl;
         }
 
         if(syncToRedis) {

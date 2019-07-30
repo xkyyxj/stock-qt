@@ -112,8 +112,6 @@ void StockChart::setModel(StockChartModel *_model) {
 }
 
 void StockChart::infoTypeChanged(int type) {
-    std::cout << type << std::endl;
-
     currDisplayType = static_cast<DisplayType>(type);
     update();
 }
@@ -263,14 +261,14 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
     // 前一天的收盘价
     double preDayClose = indexInfo.pre_close;
     size_t lastIndex=  indexInfo.info_list.size() - 1;
-    double minPrice = indexInfo.info_list[lastIndex].
-            mainContent[StockIndexBatchInfo::CURR_MIN];
-    double maxPrice = indexInfo.info_list[lastIndex].
-            mainContent[StockIndexBatchInfo::CURR_MIN];
-    double absMax = fabs(minPrice) > fabs(maxPrice) ? fabs(minPrice) :
-                                                      fabs(maxPrice);
-    double max_pct = (absMax - preDayClose) / preDayClose;
-    double delta = 2 * absMax;
+    double minPrice = indexInfo.info_list.size() > 0 ? indexInfo.info_list[lastIndex].
+            mainContent[StockIndexBatchInfo::CURR_MIN] : 0;
+    double maxPrice = indexInfo.info_list.size() > 0 ? indexInfo.info_list[lastIndex].
+            mainContent[StockIndexBatchInfo::CURR_MAX] : 0;
+    double absMax = fabs(minPrice - preDayClose) > fabs(maxPrice - preDayClose)
+            ? minPrice : maxPrice;
+    double max_pct = fabs(absMax - preDayClose) / preDayClose;
+    double delta = 2 * fabs(absMax - preDayClose);
     // 将最大波动百分比均分成６份，然后上下对等来画
     double per_pct = max_pct / 6;
     //　分时图主体显示区宽度
@@ -280,7 +278,9 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
     int preX = -1, preY = -1; // 上一根线条的结束点
     for(size_t i = 1;i < indexInfo.info_list.size();i++) {
         double currPrice = indexInfo.info_list[i].mainContent[StockIndexBatchInfo::CURR_PRICE];
-        double toTop = currPrice < 0 ? fabs(currPrice) + absMax : absMax - currPrice;
+        double toTop = currPrice < preDayClose ?
+                    preDayClose - currPrice + fabs(absMax - preDayClose) :
+                    fabs(absMax - currPrice);
         int y = static_cast<int>(toTop / delta * event->rect().height());
 
         // 计算一下经历了多长的交易时间(午休时间不计算在内)
@@ -296,7 +296,7 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
             deltaTime += totalSeconds / 2 + afternoonStartTime.secsTo(indexInfo.info_list[i].time);
         }
         else {
-            break;
+            continue;
         }
 
         int x = static_cast<int>(deltaTime / static_cast<double>(totalSeconds)

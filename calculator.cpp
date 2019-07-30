@@ -1,5 +1,4 @@
-﻿#include <vector>
-#include <QString>
+﻿#include <QString>
 
 #include "calculator.h"
 #include "data/datacenter.h"
@@ -37,9 +36,16 @@ Calculator::Calculator(const Calculator& origin) noexcept {
     defaultDatabase.open();*/
 }
 
+void Calculator::initData() noexcept {
+    DataCenter& instance = DataCenter::getInstance();
+    stockList = instance.getStockList(defaultDatabase);
+}
+
 void Calculator::operator()() noexcept {
+    initData();
     findVWaveStock(3);
     findContinueUpStock(3);
+    findBigWave();
 }
 
 /**
@@ -71,7 +77,6 @@ void Calculator::findVWaveStock(int checkDays) noexcept {
     std::vector<VWave> downRedUpLow;
     std::vector<VWave> finalResult;
 
-    std::vector<StockBaseInfo> stockList = instance.getStockList(defaultDatabase);
     for(size_t i = 0;i < stockList.size();i++) {
         QString ts_code = stockList[i].ts_code;
         StockBatchInfo dayInfo = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
@@ -157,7 +162,6 @@ void Calculator::findContinueUpStock(int up_days) noexcept {
     };
 
     DataCenter& instance = DataCenter::getInstance();
-    std::vector<StockBaseInfo> stockList = instance.getStockList(defaultDatabase);
     std::string spe_fileter(" order by trade_date desc limit 40");
 
     // 计算之前首先先把要生成天的数据删掉
@@ -253,4 +257,81 @@ void Calculator::startCalcualte() noexcept {
     Calculator calculator;
     boost::thread calThread(calculator);
     calThread.detach();
+}
+
+void Calculator::findBigWave(int calDays) noexcept {
+    struct BigWave {
+        QString ts_code, ts_name;
+        double stddev, ave;
+    };
+
+    std::vector<BigWave> rst;
+    DataCenter& instance = DataCenter::getInstance();
+
+    // 计算之前首先先把要生成天的数据删掉
+    QDate date = QDate::currentDate();
+    QString dateStr = date.toString("yyyy-MM-dd");
+    QString delWhere(" date='");
+    delWhere.append(dateStr).append("'");
+    instance.executeDel("big_wave", delWhere, defaultDatabase);
+
+    for(size_t i = 0;i < stockList.size();i++) {
+        BigWave tempRst;
+        QString ts_code = stockList[i].ts_code;
+        StockBatchInfo dayInfo = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
+
+        tempRst.ts_code = ts_code;
+        tempRst.ts_name = dayInfo.ts_name;
+        if(dayInfo.info_list.size() > calDays) {
+            auto rbegin = dayInfo.info_list.rbegin(),
+                    rend = dayInfo.info_list.rbegin() + calDays;
+            float total = 0;
+            for(;rbegin != rend;rbegin++) {
+                total += rbegin->pct_chg;
+            }
+            tempRst.ave = total / calDays;
+            rbegin = dayInfo.info_list.rbegin();
+            float aveDelta2Total = 0;
+            for(;rbegin != rend;rbegin++) {
+                aveDelta2Total += (rbegin->pct_chg - tempRst.ave) *
+                        (rbegin->pct_chg - tempRst.ave);
+            }
+            tempRst.stddev = aveDelta2Total / calDays;
+        }
+    }
+
+    // 按照降序拍一下序
+    std::sort(rst.begin(), rst.end(), [](BigWave& one, BigWave& two) -> bool {
+        return one.stddev - two.stddev > 0.0001 ? false : true;
+    });
+
+    if(rst.size() > 0) {
+        std::vector<std::string> columns;
+        columns.push_back("ts_code");
+        columns.push_back("ts_name");
+        columns.push_back("date");
+        columns.push_back("stddev");
+        columns.push_back("ave");
+        std::vector<QVariantList*> insertParams;
+        QVariantList codeList;
+        QVariantList nameList;
+        QVariantList dateList;
+        QVariantList stddevList;
+        QVariantList aveList;
+        QDate date = QDate::currentDate();
+        for(BigWave& temp : rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            dateList << date;
+            stddevList << temp.stddev;
+            aveList << temp.ave;
+        }
+        insertParams.push_back(&codeList);
+        insertParams.push_back(&nameList);
+        insertParams.push_back(&dateList);
+        insertParams.push_back(&stddevList);
+        insertParams.push_back(&aveList);
+        instance.executeInsert("big_wave", columns, insertParams,
+                               defaultDatabase);
+    }
 }
