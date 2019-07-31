@@ -51,6 +51,8 @@ public:
 
     void startFetchIndexInfo(); // 开始获取股票的每日信息
 
+    void startExecIndexAna() noexcept;
+
     std::vector<StockBaseInfo> getStockList(QSqlDatabase&) noexcept;
 
     StockBatchInfo getStockDayInfo(const std::string& ts_code, QSqlDatabase& temp, std::string spe_filter=std::string()) noexcept;

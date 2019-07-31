@@ -12,6 +12,7 @@
 #include <boost/algorithm/string.hpp>
 #include "data/stockbaseinfo.h"
 #include <boost/chrono.hpp>
+#include "indexanalyzer.h"
 
 DataCenter* DataCenter::dataCenter = new DataCenter();
 
@@ -240,13 +241,6 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
             realCode.append(".SZ_index");
         }
 
-        bool is_001 = false;
-        if(realCode == "000028.SZ_index") {
-            is_001 = true;
-            //std::cout << "running 000028" << std::endl;
-            //std::cout << temp << std::endl;
-        }
-
         if(instance.idToConMapMap[currId].find(realCode) != instance.idToConMapMap[currId].end()) {
             std::string& origin = instance.idToConMapMap[currId].at(realCode);
             currIndexInfo = StockIndexBatchInfo::appendEncodeUseSina(origin, temp);
@@ -254,10 +248,6 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         else {
             std::string emptyStr;
             currIndexInfo = StockIndexBatchInfo::appendEncodeUseSina(emptyStr, temp);
-        }
-
-        if(is_001 && syncToRedis) {
-            //std::cout << currIndexInfo << std::endl;
         }
 
         if(syncToRedis) {
@@ -336,7 +326,13 @@ void DataCenter::startFetchIndexInfo() {
             tempThread.detach();    //分离线程，后台运行
         }
     }
+}
 
-
-    //dataFetch.fetchIndexData(vector);
+/**
+ * 开启分时信息的分析程序
+ */
+void DataCenter::startExecIndexAna() noexcept {
+    IndexAnalyzer ana;
+    boost::thread tempThread(ana);
+    tempThread.detach();
 }

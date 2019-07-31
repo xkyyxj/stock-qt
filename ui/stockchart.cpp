@@ -1,10 +1,14 @@
-﻿#include "stockchart.h"
+﻿#define BOOST_ALL_DYN_LINK
+#include "stockchart.h"
 #include <iostream>
 #include <cmath>
+#include <boost/chrono.hpp>
 
 static const int MIN_K_LINE_WIDTH = 6;
 static const int DEFAULT_K_LINE_WIDTH = 20;
 static const int MAX_K_LINE_WIDTH = 25;
+
+static const int INDEX_TWO_POINT_TIME_DELTA = 45;
 
 // 价格字体的大小，12个像素
 static const int FONT_SIZE = 12;
@@ -234,6 +238,7 @@ void StockChart::paintKLine(QPainter* painter, QPaintEvent *event) {
 }
 
 void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
+    boost::chrono::system_clock::time_point curr = boost::chrono::system_clock::now();
     QPen pen;
     QColor color;
     color.setRgb(217, 58, 24);
@@ -267,15 +272,69 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
             mainContent[StockIndexBatchInfo::CURR_MAX] : 0;
     double absMax = fabs(minPrice - preDayClose) > fabs(maxPrice - preDayClose)
             ? minPrice : maxPrice;
-    double max_pct = fabs(absMax - preDayClose) / preDayClose;
+    double max_pct = fabs(absMax - preDayClose) / preDayClose * 100;
     double delta = 2 * fabs(absMax - preDayClose);
     // 将最大波动百分比均分成６份，然后上下对等来画
     double per_pct = max_pct / 6;
     //　分时图主体显示区宽度
     int mainContentWidth = event->rect().width() - PRICE_AREA_WIDTH;
 
-    // 先绘制主体部分
+    // 然后绘制右边的百分比显示区以及窗格系统
+    QFont priceFont;
+    priceFont.setPointSize(FONT_SIZE);
+    painter->setFont(priceFont);
+    QLine rightEndLine(mainContentWidth, 0, mainContentWidth, event->rect().height());
+    painter->drawLine(rightEndLine);
+
+    int eachPriceLevelHeight = event->rect().height() / 13;
+    //　绘制窗格系统，　重置下画笔颜色
+    QColor lineColor;
+    lineColor.setRgb(206, 200, 200);
+    pen.setColor(lineColor);
+    painter->setPen(pen);
+    for(int i = 0;i < 13;i++) {
+        QLine tempLine(0, eachPriceLevelHeight * i, mainContentWidth,
+                       eachPriceLevelHeight * i);
+        painter->drawLine(tempLine);
+    }
+
+    //　绘制涨跌幅百分显示区
+    pen.setColor(color);
+    painter->setPen(pen);
+    for(int i = 0;i < 13;i++) {
+        double currPct = max_pct - per_pct * i;
+        painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT,
+                          FONT_SIZE + eachPriceLevelHeight * i,
+                          QString::fromStdString(std::to_string(currPct).
+                                                 substr(0, 5)).append("%"));
+    }
+
+    // 绘制一下当前鼠标所在K线的位置，加一个十字线，贯穿整个窗口
+    // 处理一下，避免垂直的线越过K线显示区，到了右边价格显示区
+    int pointX = currMouseP.x() > mainContentWidth ? mainContentWidth : currMouseP.x();
+    QLine horizonLine(0, currMouseP.y(), mainContentWidth, currMouseP.y());
+    painter->drawLine(horizonLine);
+
+    QLine verticLine(pointX, 0, pointX, event->rect().height());
+    painter->drawLine(verticLine);
+
+    // 绘制一下当前的价格百分比
+    int priceBackGroudHeight = FONT_SIZE + 4;
+    int halfHeight = event->rect().height() / 2;
+    float mouseOnPct = currMouseP.y() / halfHeight * max_pct;
+    mouseOnPct = mouseOnPct > max_pct ? -(mouseOnPct - max_pct) : mouseOnPct;
+    QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
+    painter->drawRect(mouseOnPriceBack);
+    QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);
+    painter->fillRect(priceFillBack, QColor(184, 243, 144));
+    painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT, currMouseP.y(),
+                      QString::fromStdString(std::to_string(mouseOnPct).
+                                             substr(0, 5)).append('%'));
+
+    // 最后绘制主体部分
     int preX = -1, preY = -1; // 上一根线条的结束点
+    QDateTime preDateTime = indexInfo.info_list.size() > 0 ? indexInfo.info_list[0].time :
+                                                             QDateTime::currentDateTime();
     for(size_t i = 1;i < indexInfo.info_list.size();i++) {
         double currPrice = indexInfo.info_list[i].mainContent[StockIndexBatchInfo::CURR_PRICE];
         double toTop = currPrice < preDayClose ?
@@ -283,6 +342,12 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
                     fabs(absMax - currPrice);
         int y = static_cast<int>(toTop / delta * event->rect().height());
 
+        // 规定一个间隔时间，小于间隔时间之内的点可以不必重复绘制，因为比较卡
+        // 但是除了最后一个点
+        if(preDateTime.secsTo(indexInfo.info_list[i].time) < INDEX_TWO_POINT_TIME_DELTA
+                && i < indexInfo.info_list.size() - 1) {
+            continue;
+        }
         // 计算一下经历了多长的交易时间(午休时间不计算在内)
         int deltaTime = 0;
         // 上午交易时间段内
@@ -311,57 +376,14 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
         painter->drawLine(tempLine);
         preX = x;
         preY = y;
+
+        preDateTime = indexInfo.info_list[i].time;
     }
 
-    // 然后绘制右边的百分比显示区以及窗格系统
-    QFont priceFont;
-    priceFont.setPointSize(FONT_SIZE);
-    painter->setFont(priceFont);
-    QLine rightEndLine(mainContentWidth, 0, mainContentWidth, event->rect().height());
-    painter->drawLine(rightEndLine);
-
-    int eachPriceLevelHeight = event->rect().height() / 13;
-    //　绘制窗格系统，　重置下画笔颜色
-    QColor lineColor;
-    lineColor.setRgb(206, 200, 200);
-    pen.setColor(lineColor);
-    painter->setPen(pen);
-    for(int i = 0;i < 13;i++) {
-        QLine tempLine(0, eachPriceLevelHeight * i, mainContentWidth,
-                       eachPriceLevelHeight * i);
-        painter->drawLine(tempLine);
-    }
-
-    //　绘制涨跌幅百分显示区
-    pen.setColor(color);
-    painter->setPen(pen);
-    for(int i = 0;i < 13;i++) {
-        double currPct = max_pct - per_pct * i;
-        painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT,
-                          FONT_SIZE + eachPriceLevelHeight * i,
-                          QString::fromStdString(std::to_string(currPct).substr(0, 5)));
-    }
-
-    // 绘制一下当前鼠标所在K线的位置，加一个十字线，贯穿整个窗口
-    // 处理一下，避免垂直的线越过K线显示区，到了右边价格显示区
-    int pointX = currMouseP.x() > mainContentWidth ? mainContentWidth : currMouseP.x();
-    QLine horizonLine(0, currMouseP.y(), mainContentWidth, currMouseP.y());
-    painter->drawLine(horizonLine);
-
-    QLine verticLine(pointX, 0, pointX, event->rect().height());
-    painter->drawLine(verticLine);
-
-    // 绘制一下当前的价格百分比
-    int priceBackGroudHeight = FONT_SIZE + 4;
-    int halfHeight = event->rect().height() / 2;
-    float mouseOnPct = currMouseP.y() / halfHeight * max_pct;
-    mouseOnPct = mouseOnPct > max_pct ? -(mouseOnPct - max_pct) : mouseOnPct;
-    QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
-    painter->drawRect(mouseOnPriceBack);
-    QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);
-    painter->fillRect(priceFillBack, QColor(184, 243, 144));
-    painter->drawText(mainContentWidth + PRICE_MARGIN_LEFT, currMouseP.y(),
-                      QString::fromStdString(std::to_string(mouseOnPct).substr(0, 5)));
+    boost::chrono::system_clock::time_point curr2 = boost::chrono::system_clock::now();
+    boost::chrono::system_clock::duration dur = curr2 - curr;
+    boost::chrono::microseconds relDur = boost::chrono::duration_cast<boost::chrono::microseconds>(dur);
+    std::cout << "fetch data time : " << relDur << std::endl;
 
 }
 

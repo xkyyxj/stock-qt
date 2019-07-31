@@ -18,7 +18,22 @@ IndexAnalyzer::IndexAnalyzer() noexcept {
 }
 
 [[noreturn]] void IndexAnalyzer::operator()() noexcept {
+
+    struct QuickUp {
+        QString ts_code, ts_name;
+        QDateTime datetime;
+        double up_rate;
+    };
+
+    struct IndexDownUp {
+        QString ts_code, ts_name;
+        QDateTime datetime;
+    };
+
     DataCenter& instance = DataCenter::getInstance();
+
+    std::vector<QuickUp> quick_up_rst;
+    std::vector<IndexDownUp> index_down_up_rst;
 
     //　查询所有的列表(TODO -- 不能够动态的获取变更的列表)
     std::vector<StockBaseInfo> stockList = instance.getStockList(defaultDatabase);
@@ -27,6 +42,63 @@ IndexAnalyzer::IndexAnalyzer() noexcept {
             StockBaseInfo currInfo = stockList[i];
             QString ts_code = currInfo.ts_code;
             StockIndexBatchInfo retVal = instance.getStockIndexInfo(ts_code.toStdString());
+            double up_rate = 0;
+            if(judgeQuickUp(retVal, up_rate)) {
+                QuickUp quick_up;
+                quick_up.ts_code = retVal.ts_code;
+                quick_up.ts_name = retVal.ts_name;
+                quick_up.up_rate = up_rate;
+                quick_up.datetime = QDateTime::currentDateTime();
+                quick_up_rst.push_back(quick_up);
+            }
+
+            if(quickDownThenUp(retVal)) {
+                IndexDownUp i_down_up;
+                i_down_up.ts_code = retVal.ts_code;
+                i_down_up.ts_name = retVal.ts_name;
+                i_down_up.datetime = QDateTime::currentDateTime();
+            }
+        }
+
+        //　将结果插入到数据库当中
+        std::vector<std::string> columns;
+        columns.push_back("ts_code");
+        columns.push_back("ts_name");
+        columns.push_back("datetime");
+        columns.push_back("up_rate");
+        std::vector<QVariantList*> insertParams;
+        QVariantList codeList;
+        QVariantList nameList;
+        QVariantList datetimeList;
+        QVariantList upRateList;
+        for (QuickUp& temp : quick_up_rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            datetimeList << temp.datetime;
+            upRateList << temp.up_rate;
+            insertParams.push_back(&codeList);
+            insertParams.push_back(&nameList);
+            insertParams.push_back(&datetimeList);
+            insertParams.push_back(&upRateList);
+            instance.executeInsert("index_quick_up", columns, insertParams, defaultDatabase);
+        }
+
+        columns.clear();
+        columns.push_back("ts_code");
+        columns.push_back("ts_name");
+        columns.push_back("datetime");
+        insertParams.clear();
+        codeList.clear();
+        nameList.clear();
+        datetimeList.clear();
+        for (IndexDownUp& temp : index_down_up_rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            datetimeList << temp.datetime;
+            insertParams.push_back(&codeList);
+            insertParams.push_back(&nameList);
+            insertParams.push_back(&datetimeList);
+            instance.executeInsert("index_down_up", columns, insertParams, defaultDatabase);
         }
     }
 }
@@ -36,7 +108,7 @@ IndexAnalyzer::IndexAnalyzer() noexcept {
  * 上涨百分比/所用时间(秒)
  * 入选阈值：> 1%/60秒
  */
-bool judgeQuickUp(StockIndexBatchInfo& info) noexcept {
+bool IndexAnalyzer::judgeQuickUp(StockIndexBatchInfo& info, double& ret_up_rate) noexcept {
     size_t infoSize = info.info_list.size();
     if(infoSize < 2)
         return false;
@@ -46,14 +118,23 @@ bool judgeQuickUp(StockIndexBatchInfo& info) noexcept {
     StockIndexBatchInfo::SingleIndexInfo lastPrePoint = info.info_list[infoSize - 2];
 
     qint64 secondsDelta = lastPrePoint.time.secsTo(lastPoint.time);
-
+    if(secondsDelta > 0) {
+        // 计算一下涨跌百分比
+        double lastPrice = lastPoint.mainContent[StockIndexBatchInfo::CURR_PRICE];
+        double prePrice = lastPrePoint.mainContent[StockIndexBatchInfo::CURR_PRICE];
+        double pct = (lastPrice - prePrice) / prePrice;
+        double up_rate = pct / secondsDelta * 60;
+        ret_up_rate = up_rate;
+        return up_rate > 0.01;
+    }
+    return false;
 }
 
 /**
  * TODO -- 低于收盘价格的急速下跌后反弹
  * @return 返回一个分数，代表买入价值
  */
-int quickDownThenUp(StockIndexBatchInfo& info) noexcept {
+int IndexAnalyzer::quickDownThenUp(StockIndexBatchInfo& info) noexcept {
     QDateTime currTime = QDateTime::currentDateTime();
     QDateTime fortyMinBefore = currTime.addSecs(-60 * 40);
     std::vector<StockIndexBatchInfo::SingleIndexInfo>& v = info.info_list;
