@@ -32,6 +32,7 @@ CONFIG += c++11
 SOURCES += \
         calculator.cpp \
         indexanalyzer.cpp \
+        infodisplay.cpp \
         ui/categorytreemodel.cpp \
         data/datacenter.cpp \
         data/datafetch.cpp \
@@ -52,6 +53,7 @@ HEADERS += \
         category.h \
         data/stockbaseinfo.h \
         indexanalyzer.h \
+        infodisplay.h \
         ui/categorytreemodel.h \
         commonenum.h \
         data/datacenter.h \
@@ -70,6 +72,7 @@ HEADERS += \
         utils/zlibcompress.h
 
 FORMS += \
+        infodisplay.ui \
         maincontent.ui \
         mainwindow.ui
 

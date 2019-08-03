@@ -1,4 +1,4 @@
-#include "stockinfo.h"
+﻿#include "stockinfo.h"
 
 StockBatchInfo::StockBatchInfo(StockBatchInfo&& origin) noexcept {
     this->ts_code = std::move(origin.ts_code);
@@ -19,7 +19,11 @@ void StockBatchInfo::addSingleDayInfos(QSqlQuery& queryInfo) {
         singleInfo.high = queryInfo.value("high").toFloat();
         singleInfo.open = queryInfo.value("open").toFloat();
         singleInfo.close = queryInfo.value("close").toFloat();
-        singleInfo.tradeDate = queryInfo.value("trade_date").toDate();
+        singleInfo.pct_chg = queryInfo.value("pct_chg").toFloat();
+        // TODO -- 下面这一行似乎是不能正常工作的，所以需要修正一下
+        //singleInfo.tradeDate = queryInfo.value("trade_date").toDate();
+        QString dateStr = queryInfo.value("trade_date").toString();
+        singleInfo.tradeDate = QDate::fromString(dateStr, "yyyyMMdd");
         info_list.push_back(std::move(singleInfo));
     }
 }

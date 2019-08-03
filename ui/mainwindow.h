@@ -8,6 +8,8 @@
 #include "stockchartmodel.h"
 #include <QModelIndex>
 #include <QItemSelection>
+#include "data/stockinfo.h"
+#include "infodisplay.h"
 
 namespace Ui {
 class MainWindow;
@@ -28,6 +30,9 @@ private:
 private slots:
     void tableDoubleClicked(const QModelIndex& index);
     void setFetchIndexDelta();
+    void stockInfoSelected(StockInfo&);
+
+    void selectedStockChanged();
 public slots:
     void treeNodeSelected(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -35,6 +40,7 @@ public slots:
 
 private:
     Ui::MainWindow *ui;
+    InfoDisplay* display;
     //QSqlRelationalTableModel* tableModel;
     MainTableModel* tableModel;
     StockChartModel* viewModel;

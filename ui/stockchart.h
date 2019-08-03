@@ -31,7 +31,7 @@ public slots:
     void infoTypeChanged(int);
 
 signals:
-    void mouseOnChanged(StockInfo);
+    void mouseOnChanged(StockInfo&);
 
 protected:
     void paintEvent(QPaintEvent *event) override;

@@ -253,7 +253,7 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         if(syncToRedis) {
             // 将原先Redis缓存当中存储的取出来，然后与当前程序缓存的拼接起来，一起写入到Redis当中
             std::string finalIndexInfo;
-            instance.redisMap[currId].getBinaryDataFromRedis(realCode, [&instance, &currId, &currIndexInfo, &finalIndexInfo, is_001](char* rst, size_t size) -> void {
+            instance.redisMap[currId].getBinaryDataFromRedis(realCode, [&instance, &currId, &currIndexInfo, &finalIndexInfo](char* rst, size_t size) -> void {
                 if(rst != nullptr) {
                     // 解压一下字符串
                     instance.compressMap[currId].startDecompress();
@@ -276,6 +276,7 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
             std::vector<unsigned char> compressRst = instance.compressMap[currId].endCompress(finalIndexInfo);
             instance.redisMap[currId].writeBinaryDataToStr(realCode, compressRst.data(), compressRst.size());
         }
+
         instance.idToConMapMap[currId][realCode] = !syncToRedis ? std::move(currIndexInfo) : std::string();
 
     }

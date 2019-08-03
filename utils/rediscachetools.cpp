@@ -75,6 +75,7 @@ bool RedisCacheTools::writeBinaryDataToStr(std::string key, unsigned char* data,
     }
     else {
         // 处理一下成功的情况
+        freeReplyObject(reply);
         return true;
     }
 }
@@ -98,6 +99,7 @@ bool RedisCacheTools::getBinaryDataFromRedis(std::string key, std::function<void
         char* data = reply->str;
         size_t size = reply->len;
         callback(data, size);
+        freeReplyObject(reply);
         return true;
     }
 }

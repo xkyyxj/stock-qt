@@ -46,6 +46,7 @@ void Calculator::operator()() noexcept {
     findVWaveStock(3);
     findContinueUpStock(3);
     findBigWave();
+    lastDayMaxUp();
 }
 
 /**
@@ -152,6 +153,60 @@ void Calculator::findVWaveStock(int checkDays) noexcept {
 
     boost::chrono::duration<double> end_time = boost::chrono::system_clock::now() - now;
     std::cout << "all finished in " << end_time.count() << "seconds" << std::endl;
+}
+
+/**
+ * 查询昨天涨停的，目前规则比较简单：
+ * 涨幅大于9%;
+ */
+void Calculator::lastDayMaxUp() noexcept {
+    struct LastMaxUp {
+        QString ts_code, ts_name;
+    };
+
+    DataCenter& instance = DataCenter::getInstance();
+    // 计算之前首先先把要生成天的数据删掉
+    QDate date = QDate::currentDate();
+    QString dateStr = date.toString("yyyy-MM-dd");
+    QString delWhere(" date='");
+    delWhere.append(dateStr).append("'");
+    instance.executeDel("last_max_up", delWhere, defaultDatabase);
+
+    std::vector<LastMaxUp> rst;
+
+    for(size_t i = 0;i < stockList.size();i++) {
+        LastMaxUp temp;
+        QString ts_code = stockList[i].ts_code;
+        StockBatchInfo dayInfo = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
+        int lastIndex = dayInfo.info_list.size() - 1;
+        StockBatchInfo::SingleInfo& lastInfo = dayInfo.info_list[lastIndex];
+        if(lastInfo.pct_chg > 9) {
+            temp.ts_code = ts_code;
+            temp.ts_name = dayInfo.ts_name;
+            rst.push_back(temp);
+        }
+    }
+
+    if(rst.size() > 0) {
+        std::vector<std::string> columns;
+        columns.push_back("ts_code");
+        columns.push_back("ts_name");
+        columns.push_back("date");
+        std::vector<QVariantList*> insertParams;
+        QVariantList codeList;
+        QVariantList nameList;
+        QVariantList dateList;
+        QDate date = QDate::currentDate();
+        for(LastMaxUp& temp : rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            dateList << date;
+        }
+        insertParams.push_back(&codeList);
+        insertParams.push_back(&nameList);
+        insertParams.push_back(&dateList);
+        instance.executeInsert("last_max_up", columns, insertParams, defaultDatabase);
+    }
 }
 
 void Calculator::findContinueUpStock(int up_days) noexcept {
@@ -297,6 +352,7 @@ void Calculator::findBigWave(int calDays) noexcept {
                         (rbegin->pct_chg - tempRst.ave);
             }
             tempRst.stddev = aveDelta2Total / calDays;
+            rst.push_back(tempRst);
         }
     }
 

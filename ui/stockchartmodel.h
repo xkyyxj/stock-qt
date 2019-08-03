@@ -14,6 +14,8 @@ public:
 
     StockBatchInfo* getCurrStockKInfo();
     StockIndexBatchInfo getCurrStockIndexInfo();
+
+    void setSelectedStock(std::string ts_code) noexcept;
 public slots:
     void currSelectdStockChanged(const QModelIndex& index);
 

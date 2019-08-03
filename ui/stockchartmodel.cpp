@@ -10,6 +10,13 @@ StockChartModel::StockChartModel() {
     currSelectedIndexInfo = dataCenter.getStockIndexInfo("000001.SZ");
 }
 
+void StockChartModel::setSelectedStock(std::string ts_code) noexcept {
+    if(ts_code != currSelectedTsCode) {
+        std::cout << "curr selected ts is : " << ts_code << std::endl;
+        currSelectedTsCode = ts_code;
+        reset();
+    }
+}
 
 void StockChartModel::currSelectdStockChanged(const QModelIndex& index) {
     DataCenter& dataCenter = DataCenter::getInstance();

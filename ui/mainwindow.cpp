@@ -109,9 +109,23 @@ MainWindow::MainWindow(QWidget *parent) :
     // 开始获取股票的实时信息
     dataCenter.startFetchIndexInfo();
 
+    // 开启实时分析程序
+    //dataCenter.startExecIndexAna();
+
     // 控制下Ｋ线图的切换
     connect(ui->comboBox, SIGNAL(currentIndexChanged(int)), ui->openGLWidget, SLOT(infoTypeChanged(int)));
 
+    //　控制下鼠标移动到某根Ｋ线的时候，显示当日的信息
+    connect(ui->openGLWidget, SIGNAL(mouseOnChanged(StockInfo&)),
+            this, SLOT(stockInfoSelected(StockInfo&)));
+
+    // 创建一个弹出窗，然后显示单根Ｋ线的信息
+    display = new InfoDisplay(this);
+    display->setModal(Qt::NonModal);
+    display->show();
+
+    connect(ui->openGLWidget, SIGNAL(mouseOnChanged(StockInfo&)),
+            display, SLOT(stockInfoChanged(StockInfo&)));
 }
 
 MainWindow::~MainWindow()
@@ -119,10 +133,21 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::selectedStockChanged() {
+    QString ts_code = ui->lineEdit->text();
+    viewModel->setSelectedStock(ts_code.toStdString());
+}
+
 void MainWindow::tableDoubleClicked(const QModelIndex& index) {
     viewModel->currSelectdStockChanged(index);
 }
 
+void MainWindow::stockInfoSelected(StockInfo& info) {
+    // 构建一个展示字符串
+    QString content;
+    content.append("名称:").append(info.ts_name).append(";");
+    ui->label->setText(content);
+}
 
 void MainWindow::treeNodeSelected(const QItemSelection &selected, const QItemSelection &deselected) {
     QModelIndex index = selected.indexes().first();

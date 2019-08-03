@@ -26,6 +26,8 @@ public:
     static void startCalcualte() noexcept;
 
     void findBigWave(int = 10) noexcept;
+
+    void lastDayMaxUp() noexcept;
 };
 
 #endif // CALCULATOR_H
