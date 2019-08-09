@@ -1,4 +1,4 @@
-#include "maintablemodel.h"
+﻿#include "maintablemodel.h"
 #include <QSqlQuery>
 
 MainTableModel::MainTableModel(DataCenter* _dataCenter, QObject* parent): QAbstractTableModel (parent), tableData () {
@@ -58,7 +58,7 @@ void MainTableModel::selectData() {
     // 拼接SQL片段
     QString querySql = "select ";
     QString tempColumns;
-    for(int i = 0;i < selectColumns.size() - 1;i++) {
+    for(size_t i = 0;i < selectColumns.size() - 1;i++) {
         querySql.append(selectColumns[i]).append(",");
     }
     querySql.append(selectColumns[selectColumns.size() - 1]);
@@ -69,11 +69,11 @@ void MainTableModel::selectData() {
     dataCenter->executeQuery(querySql, [this, &tempColumns](QSqlQuery& query) -> void {
         tableData.clear();
         while(query.next()) {
-            QVector<QVariant> tempRow;
+            std::vector<QVariant> tempRow;
             foreach(tempColumns, selectColumns) {
-                tempRow.append(query.value(tempColumns));
+                tempRow.push_back(query.value(tempColumns));
             }
-            tableData.append(std::move(tempRow));
+            tableData.push_back(std::move(tempRow));
         }
 
         // 通知视图进行更新
@@ -92,13 +92,24 @@ void MainTableModel::setPrimaryKey(QString& key) {
 
 // 根据QModelIndex返回当前行的主键Value
 QVariant MainTableModel::getPrimaryKeyValue(const QModelIndex& index) const {
-    int row = index.row();
-    int column = 0;
-    for(int i = 0;i < selectColumns.size() - 1;i++) {
+    size_t row = index.row();
+    size_t column = 0;
+    for(size_t i = 0;i < selectColumns.size() - 1;i++) {
         if(selectColumns[i] == primaryKey) {
             column = i;
             break;
         }
     }
     return tableData[row][column];
+}
+
+void MainTableModel::setTableData(std::vector<std::vector<QVariant>>& data) noexcept {
+    tableData = data;
+}
+
+/**
+ * 主要是服务于从redis缓存当中获取数据并模拟复制到该对象时，用于刷新界面
+ */
+void MainTableModel::updateView() noexcept {
+    endResetModel();
 }

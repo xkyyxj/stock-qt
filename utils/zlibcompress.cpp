@@ -17,7 +17,7 @@ void ZLibCompress::startCompress() noexcept {
     compressStrm.zalloc = nullptr;
     compressStrm.zfree = nullptr;
     compressStrm.opaque = nullptr;
-    deflateInit(&compressStrm, Z_DEFAULT_COMPRESSION);
+    deflateInit(&compressStrm, compressLevel);
 
     compressStatus = START_COMPRESS;
 }
@@ -56,9 +56,10 @@ std::vector<unsigned char> ZLibCompress::compressWithZLibPri(unsigned char* inpu
 }
 
 std::vector<unsigned char> ZLibCompress::compressDataWithZlib(std::string& val) {
-    char* temp = const_cast<char*>(val.data());
+    // 对于字符串需要特殊处理，将最后一个'\0'字符添加压缩当中，而不是使用val.data()
+    char* temp = const_cast<char*>(val.c_str());
     unsigned char* input = reinterpret_cast<unsigned char*>(temp);
-    return compressDataWithZlib(input, val.size());
+    return compressDataWithZlib(input, val.size() + 1);
 }
 
 std::vector<unsigned char> ZLibCompress::compressDataWithZlib(unsigned char* input, size_t size) {
@@ -81,9 +82,10 @@ std::vector<unsigned char> ZLibCompress::endCompress(unsigned char* input, size_
 
 std::vector<unsigned char> ZLibCompress::endCompress(std::string& input) noexcept {
     // 调用compressDataWithZlib,输出压缩尾
-    char* signedCharArray = const_cast<char*>(input.data());
+    // 对于字符串需要特殊处理，将最后一个'\0'字符添加压缩当中，而不是使用input.data()
+    char* signedCharArray = const_cast<char*>(input.c_str());
     unsigned char* tempCharArray = reinterpret_cast<unsigned char*>(signedCharArray);
-    std::vector<unsigned char>&& temp = compressWithZLibPri(tempCharArray, input.size(), Z_FINISH);
+    std::vector<unsigned char>&& temp = compressWithZLibPri(tempCharArray, input.size() + 1, Z_FINISH);
 
     deflateEnd(&compressStrm);
     compressStatus = END_COMPRESS;
@@ -115,12 +117,6 @@ std::vector<unsigned char> ZLibCompress::endDecompress(unsigned char* input, siz
     decompressStatus = END_DECOMPRESS;
 
     return std::move(temp);
-}
-
-std::vector<unsigned char> ZLibCompress::decompressDataWithZlib(std::string& val) {
-    char* temp = const_cast<char*>(val.data());
-    unsigned char* input = reinterpret_cast<unsigned char*>(temp);
-    return decompressDataWithZlib(input, val.size());
 }
 
 std::vector<unsigned char> ZLibCompress::decompressDataWithZlib(unsigned char* input, size_t size) {
@@ -158,9 +154,24 @@ inline int ZLibCompress::getDecompressStatus() noexcept {
     return decompressStatus;
 }
 
+void ZLibCompress::setCompressLevel(int level) {
+    if(level < 0 || level > 9) {
+        throw new ZLibException("压缩等级必须在０~9之间（包含０和９）");
+    }
+    compressLevel = level;
+}
+
 ZLibCompress::ZLibCompress() noexcept {
     compressStatus = END_COMPRESS;
     decompressStatus = END_DECOMPRESS;
+
+    compressLevel = 1;
+}
+
+ZLibCompress::ZLibCompress(int level) noexcept {
+    compressStatus = END_COMPRESS;
+    decompressStatus = END_DECOMPRESS;
+    compressLevel = level;
 }
 
 ZLibCompress::ZLibCompress(ZLibCompress&& origin) noexcept {
@@ -171,6 +182,8 @@ ZLibCompress::ZLibCompress(ZLibCompress&& origin) noexcept {
 
     compressStrm = origin.compressStrm;
     decompressStrm = origin.decompressStrm;
+
+    compressLevel = origin.compressLevel;
 }
 
 ZLibCompress& ZLibCompress::operator=(ZLibCompress&& origin) noexcept {
@@ -184,6 +197,7 @@ ZLibCompress& ZLibCompress::operator=(ZLibCompress&& origin) noexcept {
 
     compressStrm = origin.compressStrm;
     decompressStrm = origin.decompressStrm;
+    compressLevel = origin.compressLevel;
 }
 
 // 清理资源，意味着该类对象是不是不应该拷贝构造？

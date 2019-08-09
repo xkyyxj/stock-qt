@@ -1,10 +1,10 @@
-﻿#ifndef DATACENTER_H
+﻿#pragma execution_character_set("utf-8")
+#ifndef DATACENTER_H
 #define DATACENTER_H
 
 #include <QObject>
 #include <QVector>
 #include <QMap>
-#pragma execution_character_set("utf-8")
 #include <QSqlDatabase>
 #include "utils/rediscachetools.h"
 #include "stockinfo.h"
@@ -88,6 +88,9 @@ private:
 
     // 每个线程都有自己的Redis链接(非线程安全)
     std::map<boost::thread::id, RedisCacheTools> redisMap;
+
+    //　分时数据是否需要压缩
+    bool isCompressIndexData;
 
 };
 

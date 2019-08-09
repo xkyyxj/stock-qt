@@ -30,6 +30,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
+        addconcerndialog.cpp \
         calculator.cpp \
         indexanalyzer.cpp \
         infodisplay.cpp \
@@ -37,6 +38,7 @@ SOURCES += \
         data/datacenter.cpp \
         data/datafetch.cpp \
         main.cpp \
+        ui/maintable.cpp \
         ui/maintablemodel.cpp \
         ui/mainwindow.cpp \
         utils/filemanager.cpp \
@@ -49,6 +51,7 @@ SOURCES += \
         utils/zlibcompress.cpp
 
 HEADERS += \
+        addconcerndialog.h \
         calculator.h \
         category.h \
         data/stockbaseinfo.h \
@@ -59,6 +62,7 @@ HEADERS += \
         data/datacenter.h \
         data/datafetch.h \
         excpetions.h \
+        ui/maintable.h \
         ui/maintablemodel.h \
         ui/mainwindow.h \
         utils/filemanager.h \
@@ -72,6 +76,7 @@ HEADERS += \
         utils/zlibcompress.h
 
 FORMS += \
+        addconcerndialog.ui \
         infodisplay.ui \
         maincontent.ui \
         mainwindow.ui

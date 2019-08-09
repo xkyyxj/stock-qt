@@ -22,6 +22,8 @@ namespace zlib {
 
     class ZLibCompress {
 
+        int compressLevel;
+
         z_stream compressStrm;
         z_stream decompressStrm;
 
@@ -39,9 +41,13 @@ namespace zlib {
 
         ZLibCompress() noexcept;
 
+        ZLibCompress(int) noexcept;
+
         ~ZLibCompress() noexcept;
 
         ZLibCompress(ZLibCompress&&) noexcept;
+
+        void setCompressLevel(int);
 
         void startCompress() noexcept;
 
@@ -64,8 +70,6 @@ namespace zlib {
         void startDecompress() noexcept;
 
         std::vector<unsigned char> endDecompress(unsigned char*, size_t) noexcept;
-
-        std::vector<unsigned char> decompressDataWithZlib(std::string&);
 
         std::vector<unsigned char> decompressDataWithZlib(unsigned char*, size_t);
 

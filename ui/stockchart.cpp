@@ -39,12 +39,13 @@ void StockChart::judgeDisplay(const QRect& rect, StockBatchInfo* kInfo) {
 }
 
 static void paintSingleKLine(QPainter* painter, int x, int y, int width, int height, StockBatchInfo::SingleInfo& info) {
-    float delta = info.high - info.low;
+    // 特殊处理一下涨停的效果，防止delta为０
+    float delta = info.high - info.low > 0 ? info.high - info.low : -1;
 
     // 判定用什么颜色的画笔
     QPen pen;
     QColor color;
-    if(info.close > info.open) {
+    if(info.close > info.open || (info.close >= info.open && info.pct_chg > 0)) {
         color.setRgb(217, 58, 24);
     }
     else {
@@ -321,8 +322,8 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
     // 绘制一下当前的价格百分比
     int priceBackGroudHeight = FONT_SIZE + 4;
     int halfHeight = event->rect().height() / 2;
-    float mouseOnPct = currMouseP.y() / halfHeight * max_pct;
-    mouseOnPct = mouseOnPct > max_pct ? -(mouseOnPct - max_pct) : mouseOnPct;
+    int currMouseOnY = currMouseP.y();
+    float mouseOnPct = std::abs(currMouseOnY - halfHeight) * max_pct / halfHeight;
     QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
     painter->drawRect(mouseOnPriceBack);
     QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);
@@ -383,10 +384,11 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
     boost::chrono::system_clock::time_point curr2 = boost::chrono::system_clock::now();
     boost::chrono::system_clock::duration dur = curr2 - curr;
     boost::chrono::microseconds relDur = boost::chrono::duration_cast<boost::chrono::microseconds>(dur);
-    std::cout << "fetch data time : " << relDur << std::endl;
+    //std::cout << "fetch data time : " << relDur << std::endl;
 
 }
 
+// FIXME -- 　鼠标移动在分时图没有数据的时候会导致界面卡死
 void StockChart::mouseMoveEvent(QMouseEvent *event) {
     currMouseP = event->pos();
     update();

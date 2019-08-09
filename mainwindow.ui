@@ -107,7 +107,7 @@
             </sizepolicy>
            </property>
           </widget>
-          <widget class="QTableView" name="tableView">
+          <widget class="MainTable" name="tableView">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -186,6 +186,11 @@
    <class>StockChart</class>
    <extends>QOpenGLWidget</extends>
    <header>ui/stockchart.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MainTable</class>
+   <extends>QTableView</extends>
+   <header>ui/maintable.h</header>
   </customwidget>
  </customwidgets>
  <resources>

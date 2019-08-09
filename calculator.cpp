@@ -179,6 +179,9 @@ void Calculator::lastDayMaxUp() noexcept {
         QString ts_code = stockList[i].ts_code;
         StockBatchInfo dayInfo = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
         int lastIndex = dayInfo.info_list.size() - 1;
+        if(lastIndex < 0) {
+            continue;
+        }
         StockBatchInfo::SingleInfo& lastInfo = dayInfo.info_list[lastIndex];
         if(lastInfo.pct_chg > 9) {
             temp.ts_code = ts_code;

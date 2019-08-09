@@ -29,6 +29,9 @@ DataCenter::DataCenter() {
     defaultDatabase.open();
 
     compressMap[boost::this_thread::get_id()] = zlib::ZLibCompress();
+
+    //　TODO -- 将是否压缩实时数据放入到配置选项当中
+    isCompressIndexData = true;
 }
 
 DataCenter::~DataCenter() {
@@ -147,32 +150,40 @@ std::string DataCenter::getStockIndexInfoStr(const std::string& code) {
     }
 
     boost::lock_guard<boost::mutex> guard(*mutextMap[lockId]);
+    //std::cout << boost::this_thread::get_id() << " get lock(get) : " << lockId << std::endl;
     std::string finalRst;
     std::string currIndexInfo = idToConMapMap[lockId][code];
     std::string finalIndexInfo;
     // 如果是获取Index数据的话，还需要加上一个_index后缀
     std::string realKey(code);
     realKey.append("_index");
-    redisCache.getBinaryDataFromRedis(realKey, [this, &finalIndexInfo, &currIndexInfo, &lockId](char* rst, size_t size) -> void {
+    //std::cout << "fetch finished 1" << std::endl;
+    redisMap[lockId].getBinaryDataFromRedis(realKey, [this, &finalIndexInfo, &currIndexInfo, &lockId](char* rst, size_t size) -> void {
+        //std::cout << "fetch finished 2" << std::endl;
         if(rst != nullptr) {
-            if(rst != nullptr) {
+            std::string originStr;
+            if(this->isCompressIndexData) {
                 // 解压一下字符串
                 compressMap[lockId].startDecompress();
                 std::vector<unsigned char> realRst = compressMap[lockId].endDecompress(reinterpret_cast<unsigned char*>(rst), size);
-                //　如果需要转换为字符串的话，需要在结果集当中添加一个结束字符，因为不包含结束字符
-                // 导致最后的解析出来的字符串最后总是莫名奇妙的多了两个乱码字符
-                realRst.push_back('\0');
-
+                //realRst.push_back('\0');
                 char* tempCharArray = reinterpret_cast<char*>(realRst.data());
-                std::string originStr(tempCharArray);
-                StockIndexBatchInfo::mergeTwoEncodeStr(originStr, currIndexInfo);
-                finalIndexInfo = std::move(originStr);
+                originStr = std::string(tempCharArray);
             }
             else {
-                finalIndexInfo = std::move(currIndexInfo);
+                originStr = std::string(rst);
             }
+            //std::cout << "fetch finished 3" << std::endl;
+
+            StockIndexBatchInfo::mergeTwoEncodeStr(originStr, currIndexInfo);
+            finalIndexInfo = std::move(originStr);
         }
+        else {
+            finalIndexInfo = std::move(currIndexInfo);
+        }
+        //std::cout << "fetch finished " << std::endl;
     });
+    //std::cout << boost::this_thread::get_id() << " release(get) lock : " << lockId << std::endl;
     return finalIndexInfo;
 }
 
@@ -221,6 +232,7 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
     boost::split(v, input, boost::is_any_of(";\n"), boost::token_compress_on);
     // 加锁
     boost::lock_guard<boost::mutex> guard(*instance.mutextMap[currId]);
+    //std::cout << boost::this_thread::get_id() << " get lock(write) : " << currId << std::endl;
 
     // 获取已有字符串
     std::string realCode;
@@ -255,14 +267,18 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
             std::string finalIndexInfo;
             instance.redisMap[currId].getBinaryDataFromRedis(realCode, [&instance, &currId, &currIndexInfo, &finalIndexInfo](char* rst, size_t size) -> void {
                 if(rst != nullptr) {
-                    // 解压一下字符串
-                    instance.compressMap[currId].startDecompress();
-                    std::vector<unsigned char> realRst = instance.compressMap[currId].endDecompress(reinterpret_cast<unsigned char*>(rst), size);
-                    //　添加一个字符串需要的结束字符
-                    realRst.push_back('\0');
+                    std::string originStr;
+                    if(instance.isCompressIndexData) {
+                        // 解压一下字符串
+                        instance.compressMap[currId].startDecompress();
+                        std::vector<unsigned char> realRst = instance.compressMap[currId].endDecompress(reinterpret_cast<unsigned char*>(rst), size);
+                        char* tempCharArray = reinterpret_cast<char*>(realRst.data());
+                        originStr = std::string(tempCharArray);
+                    }
+                    else {
+                        originStr = std::string(rst);
+                    }
 
-                    char* tempCharArray = reinterpret_cast<char*>(realRst.data());
-                    std::string originStr(tempCharArray);
                     StockIndexBatchInfo::mergeTwoEncodeStr(originStr, currIndexInfo);
                     finalIndexInfo = std::move(originStr);
                 }
@@ -280,6 +296,7 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         instance.idToConMapMap[currId][realCode] = !syncToRedis ? std::move(currIndexInfo) : std::string();
 
     }
+    //std::cout << boost::this_thread::get_id() << " release(write) lock : " << currId << std::endl;
 }
 
 void DataCenter::startFetchIndexInfo() {
@@ -287,7 +304,7 @@ void DataCenter::startFetchIndexInfo() {
 
     QString stockListQrySql("select ts_code from stock_list where market in ('主板', '中小板')");
 
-    executeQuery(stockListQrySql, [&vector, this](QSqlQuery& qryRst) -> void {
+    executeQuery(stockListQrySql, [&vector](QSqlQuery& qryRst) -> void {
         while(qryRst.next()) {
             vector.push_back(qryRst.value("ts_code").toString());
         }
@@ -335,5 +352,6 @@ void DataCenter::startFetchIndexInfo() {
 void DataCenter::startExecIndexAna() noexcept {
     IndexAnalyzer ana;
     boost::thread tempThread(ana);
+    std::cout << "ana thread id is: " << tempThread.get_id() << std::endl;
     tempThread.detach();
 }

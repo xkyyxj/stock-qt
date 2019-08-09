@@ -136,6 +136,9 @@ bool StockIndexBatchInfo::decodeFromStr(std::string& input) noexcept {
  * 格式如下；
  * %ts_code,ts_name,today_open,pre_close:mainContent[0~26],time; \
  * mainContent[0~26],time;
+ *
+ * FIXME -- 可能存在如下情况：先前的内容是在开盘之前获取的，所以今日开盘和昨日收盘是相对于 \
+ * 昨天来说的
  */
 std::string& StockIndexBatchInfo::appendEncodeToStr(std::string& origin) {
     if(origin.size() == 0) {
@@ -178,6 +181,9 @@ std::string& StockIndexBatchInfo::appendEncodeToStr(std::string& origin) {
  * %ts_code,ts_name,today_open,pre_close:mainContent[0~26],time; \
  * mainContent[0~26],time;
  * ts_code格式类似于：000001.SZ
+ *
+ * FIXME -- 可能存在如下情况：先前的内容是在开盘之前获取的，所以今日开盘和昨日收盘是相对于 \
+ * 昨天来说的
  */
 std::string& StockIndexBatchInfo::appendEncodeUseSina(std::string& origin, std::string& sinaStr) {
     std::string realCode = sinaStr.substr(11, 8);
@@ -255,6 +261,9 @@ std::string& StockIndexBatchInfo::appendEncodeUseSina(std::string& origin, std::
  * %ts_code,ts_name,today_open,pre_close:mainContent[0~26],time; \
  * mainContent[0~26],time;
  * ts_code格式类似于：000001.SZ
+ *
+ * FIXME -- 可能存在如下情况：先前的内容是在开盘之前获取的，所以今日开盘和昨日收盘是相对于 \
+ * 昨天来说的
  */
 void StockIndexBatchInfo::mergeTwoEncodeStr(std::string& in1, std::string& in2) {
     if(in1.size() == 0 || in2.size() == 0) {

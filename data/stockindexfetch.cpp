@@ -149,11 +149,11 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
     std::time_t currTimeT = system_clock::to_time_t(p);
     struct tm* currTimeP = std::localtime(&currTimeT);
 
-    //上午开市时间
+    //上午开市时间 FIXME -- 以前是在开盘前一分钟获取相关信息的，现在因为StockIndexInfo当中存在ＢＵＧ，此处就不早获取数据了
     struct tm temp_tm;
     temp_tm = *currTimeP;   // 结构体的默认拷贝构造
     temp_tm.tm_hour = 9;
-    temp_tm.tm_min = 29;
+    temp_tm.tm_min = 30;
     temp_tm.tm_sec = 0;
     std::time_t time_t = std::mktime(&temp_tm);
     system_clock::time_point tempPoint = system_clock::from_time_t(time_t);

@@ -1,6 +1,6 @@
 ﻿#pragma execution_character_set("utf-8")
-#ifndef MAINTABLE_H
-#define MAINTABLE_H
+#ifndef MAINTABLEMODE_H
+#define MAINTABLEMODE_H
 
 #include <QAbstractTableModel>
 #include "data/datacenter.h"
@@ -22,19 +22,23 @@ public:
 
     void selectData();
 
+    void setTableData(std::vector<std::vector<QVariant>>&) noexcept;
+
     void setDisplayHeadInfo(std::vector<QString>&);
 
     void setPrimaryKey(QString& key);
 
-    // 根据QModelIndex返回当前行的主键，主要是为了响应双击事件
+    // 根据QModelIndex返回当前行的主键，主要QVariant是为了响应双击事件
     QVariant getPrimaryKeyValue(const QModelIndex& index) const;
+
+    void updateView() noexcept;
 
 public slots:
     void changeTableData(QString& pk);
 
 
 private:
-    QVector<QVector<QVariant>> tableData;
+    std::vector<std::vector<QVariant>> tableData;
     std::vector<QString> selectColumns;
     QString tableName;
     QString filter;
@@ -45,4 +49,4 @@ private:
     QString primaryKey;
 };
 
-#endif // MAINTABLE_H
+#endif // MAINTABLEMODE_H

@@ -12,8 +12,10 @@ StockChartModel::StockChartModel() {
 
 void StockChartModel::setSelectedStock(std::string ts_code) noexcept {
     if(ts_code != currSelectedTsCode) {
+        DataCenter& dataCenter = DataCenter::getInstance();
         std::cout << "curr selected ts is : " << ts_code << std::endl;
         currSelectedTsCode = ts_code;
+        currSelectedKInfo = dataCenter.getStockBatchInfoByTsCode(QString::fromStdString(ts_code));
         reset();
     }
 }

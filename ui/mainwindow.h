@@ -10,6 +10,7 @@
 #include <QItemSelection>
 #include "data/stockinfo.h"
 #include "infodisplay.h"
+#include "utils/rediscachetools.h"
 
 namespace Ui {
 class MainWindow;
@@ -19,6 +20,7 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+    RedisCacheTools cacheTools;
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
