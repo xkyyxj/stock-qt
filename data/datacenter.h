@@ -47,7 +47,11 @@ public:
     void executeInsert(std::string, std::vector<std::string>&, std::vector<QVariantList*>,
                        QSqlDatabase);
 
+    void executeInsertOne(std::string, std::vector<std::string>&, std::vector<QVariant>&, QSqlDatabase);
+
     void executeDel(QString tableName, QString wherePart, QSqlDatabase database);
+
+    void executeUpdate(std::string tableName, std::vector<std::string>&, std::vector<QVariant>&, std::string wherePart, QSqlDatabase database);
 
     void startFetchIndexInfo(); // 开始获取股票的每日信息
 

@@ -32,6 +32,8 @@ CONFIG += c++11
 SOURCES += \
         addconcerndialog.cpp \
         calculator.cpp \
+        data/anaresult.cpp \
+        delconcerndialog.cpp \
         indexanalyzer.cpp \
         infodisplay.cpp \
         ui/categorytreemodel.cpp \
@@ -54,7 +56,9 @@ HEADERS += \
         addconcerndialog.h \
         calculator.h \
         category.h \
+        data/anaresult.h \
         data/stockbaseinfo.h \
+        delconcerndialog.h \
         indexanalyzer.h \
         infodisplay.h \
         ui/categorytreemodel.h \
@@ -77,6 +81,7 @@ HEADERS += \
 
 FORMS += \
         addconcerndialog.ui \
+        delconcerndialog.ui \
         infodisplay.ui \
         maincontent.ui \
         mainwindow.ui

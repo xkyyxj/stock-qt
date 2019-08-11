@@ -20,6 +20,8 @@ public:
     void setTableName(QString _tableName);
     void setSelectColumns(std::vector<QString> selectColumns);
 
+    inline QString getTableName() noexcept {return tableName;}
+
     void selectData();
 
     void setTableData(std::vector<std::vector<QVariant>>&) noexcept;

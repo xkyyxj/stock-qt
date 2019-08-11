@@ -23,6 +23,12 @@ void InfoDisplay::stockInfoChanged(StockInfo& info) noexcept {
     ui->close_price->setText(QString::fromStdString(std::to_string(info.close)));
     ui->pct_chg->setText(QString::fromStdString(std::to_string(info.pct_chg)));
     ui->date->setText(info.trade_date.toString("yyyy-MM-dd"));
+
+    // 计算一下振幅
+    float wave = info.pre_close > 0 ?
+                (info.high - info.low) / info.pre_close * 100 : -1;
+    std::string waveStr = wave > 0 ? std::to_string(wave).append("%") : "0%";
+    ui->wave->setText(QString::fromStdString(waveStr));
 }
 
 void InfoDisplay::mousePressEvent(QMouseEvent *event)

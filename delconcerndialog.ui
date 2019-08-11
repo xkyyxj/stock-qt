@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AddConcernDialog</class>
- <widget class="QDialog" name="AddConcernDialog">
+ <class>DelConcernDialog</class>
+ <widget class="QDialog" name="DelConcernDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>356</height>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>添加关注</string>
+   <string>Dialog</string>
   </property>
-  <widget class="QWidget" name="layoutWidget">
+  <widget class="QWidget" name="">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>30</y>
+     <y>20</y>
      <width>333</width>
-     <height>300</height>
+     <height>264</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -38,19 +38,16 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2"/>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
-       <widget class="QLabel" name="add_reason_l">
+       <widget class="QLabel" name="del_reason_l">
         <property name="text">
-         <string>添加原因</string>
+         <string>移除原因</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QTextEdit" name="add_reason"/>
+       <widget class="QTextEdit" name="del_reason"/>
       </item>
      </layout>
     </item>
@@ -72,7 +69,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>AddConcernDialog</receiver>
+   <receiver>DelConcernDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -88,7 +85,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>AddConcernDialog</receiver>
+   <receiver>DelConcernDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

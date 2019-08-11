@@ -415,6 +415,10 @@ void StockChart::mouseMoveEvent(QMouseEvent *event) {
         currMouseOnInfo.close = originInfo.close;
         currMouseOnInfo.pct_chg = originInfo.pct_chg;
         currMouseOnInfo.trade_date = originInfo.tradeDate;
+
+        // 获取一下前一天的价格
+        currMouseOnInfo.pre_close = currMouseOnIndex > 0 ?
+                    kInfo->info_list[currMouseOnIndex - 1].close : 0;
         // 发送相应的事件
         emit mouseOnChanged(currMouseOnInfo);
     }

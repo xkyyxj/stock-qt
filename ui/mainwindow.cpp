@@ -195,7 +195,14 @@ void MainWindow::treeNodeSelected(const QItemSelection &selected, const QItemSel
             tableModel->setTableName(tableName);
             tableModel->setSelectColumns(selectedColumns);
             tableModel->setDisplayHeadInfo(tableHead);
-            tableModel->setFilter(filter);
+            if(std::find(selectedColumns.begin(), selectedColumns.end(),
+                         QString("date")) != selectedColumns.end()) {
+                tableModel->setFilter(filter);
+            }
+            // 特殊处理一下关注的股票
+            else if(tableName == "concern_stock") {
+                tableModel->setFilter(" where is_remove='N'");
+            }
             tableModel->selectData();
         }
         return;

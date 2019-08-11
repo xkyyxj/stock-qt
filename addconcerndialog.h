@@ -1,4 +1,4 @@
-#ifndef ADDCONCERNDIALOG_H
+﻿#ifndef ADDCONCERNDIALOG_H
 #define ADDCONCERNDIALOG_H
 
 #include <QDialog>
@@ -14,6 +14,9 @@ class AddConcernDialog : public QDialog
 public:
     explicit AddConcernDialog(QWidget *parent = nullptr);
     ~AddConcernDialog();
+
+public slots:
+    void accept();
 
 private:
     Ui::AddConcernDialog *ui;

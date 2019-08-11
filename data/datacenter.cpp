@@ -166,7 +166,6 @@ std::string DataCenter::getStockIndexInfoStr(const std::string& code) {
                 // 解压一下字符串
                 compressMap[lockId].startDecompress();
                 std::vector<unsigned char> realRst = compressMap[lockId].endDecompress(reinterpret_cast<unsigned char*>(rst), size);
-                //realRst.push_back('\0');
                 char* tempCharArray = reinterpret_cast<char*>(realRst.data());
                 originStr = std::string(tempCharArray);
             }
@@ -220,6 +219,68 @@ void DataCenter::executeInsert(std::string tableName, std::vector<std::string>& 
         qDebug() << tempQuery.lastError();
     }
 
+}
+
+void DataCenter::executeUpdate(std::string tableName,
+                   std::vector<std::string>& columns,
+                   std::vector<QVariant>& values,
+                   std::string wherePart,
+                   QSqlDatabase database) {
+    if(columns.size() != values.size() || columns.size() == 0) {
+        throw new std::runtime_error("DataCenter::executeInsertOne: 参数数量不匹配");
+    }
+
+    std::string sql("update ");
+    sql.append(tableName).append(" set ");
+    for(size_t i = 0;i < columns.size() - 1;i++) {
+        sql.append(columns[i]).append("=?,");
+    }
+    sql.append(columns[columns.size() - 1]).append("=? ");
+    if(wherePart.size() > 0) {
+        sql.append(wherePart);
+    }
+
+    QSqlQuery tempQuery(database);
+    tempQuery.prepare(QString::fromStdString(sql));
+    for(QVariant& temp : values) {
+        tempQuery.addBindValue(temp);
+    }
+    if(!tempQuery.exec()) {
+        qDebug() << tempQuery.lastError();
+    }
+}
+
+void DataCenter::executeInsertOne(std::string table_name,
+                                  std::vector<std::string>& columns,
+                                  std::vector<QVariant>& values,
+                                  QSqlDatabase database) {
+    if(columns.size() != values.size() || columns.size() == 0) {
+        throw new std::runtime_error("DataCenter::executeInsertOne: 参数数量不匹配");
+    }
+
+    std::string placeHolder("(");
+    std::string insertSql("insert into ");
+    insertSql.append(table_name);
+    insertSql.append("(");
+    for(size_t i = 0;i < columns.size() - 1;i++) {
+        insertSql.append(columns[i]).append(",");
+        placeHolder.append("?,");
+    }
+    insertSql.append(columns[columns.size() - 1]);
+    placeHolder.append("?)");
+
+    insertSql.append(") values");
+    insertSql.append(placeHolder);
+
+    QSqlQuery tempQuery(database);
+    tempQuery.prepare(QString::fromStdString(insertSql));
+
+    for(QVariant& variant : values) {
+        tempQuery.addBindValue(variant);
+    }
+    if(!tempQuery.exec()) {
+        qDebug() << tempQuery.lastError();
+    }
 }
 
 void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
