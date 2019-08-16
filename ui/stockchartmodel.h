@@ -13,7 +13,7 @@ public:
     StockChartModel();
 
     StockBatchInfo* getCurrStockKInfo();
-    StockIndexBatchInfo getCurrStockIndexInfo();
+    const StockIndexBatchInfo* getCurrStockIndexInfo();
 
     void setSelectedStock(std::string ts_code) noexcept;
 public slots:

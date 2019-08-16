@@ -33,7 +33,10 @@ SOURCES += \
         addconcerndialog.cpp \
         calculator.cpp \
         data/anaresult.cpp \
+        data/commonanaresult.cpp \
+        data/lastmaxupindexrst.cpp \
         delconcerndialog.cpp \
+        holdingchangedialog.cpp \
         indexanalyzer.cpp \
         infodisplay.cpp \
         ui/categorytreemodel.cpp \
@@ -57,8 +60,11 @@ HEADERS += \
         calculator.h \
         category.h \
         data/anaresult.h \
+        data/commonanaresult.h \
+        data/lastmaxupindexrst.h \
         data/stockbaseinfo.h \
         delconcerndialog.h \
+        holdingchangedialog.h \
         indexanalyzer.h \
         infodisplay.h \
         ui/categorytreemodel.h \
@@ -82,6 +88,7 @@ HEADERS += \
 FORMS += \
         addconcerndialog.ui \
         delconcerndialog.ui \
+        holdingchangedialog.ui \
         infodisplay.ui \
         maincontent.ui \
         mainwindow.ui

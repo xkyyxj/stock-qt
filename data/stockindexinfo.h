@@ -38,7 +38,7 @@ public:
 
     std::string encodeToStr() noexcept;
 
-    bool decodeFromStr(std::string&) noexcept;
+    bool decodeFromStr(const std::string&) noexcept;
 
     std::string& appendEncodeToStr(std::string&) noexcept(false);
 

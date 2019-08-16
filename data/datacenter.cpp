@@ -195,6 +195,70 @@ StockIndexBatchInfo DataCenter::getStockIndexInfo(const std::string& code) {
     return info;
 }
 
+StockIndexBatchInfo DataCenter::getStockIndexInfoFromCache(const std::string& code) {
+    auto iteBegin = containsMap.begin();
+    auto iteEnd = containsMap.end();
+    boost::thread::id lockId;
+    bool found = false;
+    for(;iteBegin != iteEnd;iteBegin++) {
+        if(iteBegin->second.contains(QString::fromStdString(code))) {
+            lockId = iteBegin->first;
+            found = true;
+            break;
+        }
+    }
+
+    if(!found) {
+        return StockIndexBatchInfo();
+    }
+
+    boost::lock_guard<boost::mutex> guard(*mutextMap[lockId]);
+    StockIndexBatchInfo info;
+
+    // 不存在的话就从Redis缓存当中取出来，通常这项任务会给实时分析程序做了
+    // 通常是因为程序中间重启了，所以说数据被清掉了，然后只能从Redis当中获取了
+    // 此外就是没有使用DataCenter::getStockIndexInfoStr的原因是：boost::mutex不是可重入的
+    if(idToIndexMap[lockId].find(code) == idToIndexMap[lockId].end()) {
+        std::string finalRst;
+        std::string currIndexInfo = idToConMapMap[lockId][code];
+        std::string finalIndexInfo;
+        // 如果是获取Index数据的话，还需要加上一个_index后缀
+        std::string realKey(code);
+        realKey.append("_index");
+        //std::cout << "fetch finished 1" << std::endl;
+        redisMap[lockId].getBinaryDataFromRedis(realKey, [this, &finalIndexInfo, &currIndexInfo, &lockId](char* rst, size_t size) -> void {
+            //std::cout << "fetch finished 2" << std::endl;
+            if(rst != nullptr) {
+                std::string originStr;
+                if(this->isCompressIndexData) {
+                    // 解压一下字符串
+                    compressMap[lockId].startDecompress();
+                    std::vector<unsigned char> realRst = compressMap[lockId].endDecompress(reinterpret_cast<unsigned char*>(rst), size);
+                    char* tempCharArray = reinterpret_cast<char*>(realRst.data());
+                    originStr = std::string(tempCharArray);
+                }
+                else {
+                    originStr = std::string(rst);
+                }
+                //std::cout << "fetch finished 3" << std::endl;
+
+                StockIndexBatchInfo::mergeTwoEncodeStr(originStr, currIndexInfo);
+                finalIndexInfo = std::move(originStr);
+            }
+            else {
+                finalIndexInfo = std::move(currIndexInfo);
+            }
+            //std::cout << "fetch finished " << std::endl;
+        });
+        StockIndexBatchInfo batchInfo;
+        batchInfo.decodeFromStr(finalIndexInfo);
+        idToIndexMap[lockId][code] = batchInfo;
+        //std::cout << boost::this_thread::get_id() << " release(get) lock : " << lockId << std::endl;
+    }
+
+    return idToIndexMap[lockId][code];
+}
+
 void DataCenter::executeInsert(std::string tableName, std::vector<std::string>& columns, std::vector<QVariantList*> values,
                                QSqlDatabase database) {
     if(columns.size() == 0 || values.size() != columns.size()) {
@@ -296,7 +360,7 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
     //std::cout << boost::this_thread::get_id() << " get lock(write) : " << currId << std::endl;
 
     // 获取已有字符串
-    std::string realCode;
+    std::string realCode, dataCode;
     std::string currIndexInfo;
     for(auto temp : v) {
         // boost::split分割的时候，最后的一个字符是\n，会留下一个空串
@@ -307,11 +371,23 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
         // 将sina当中获取的格式转换为目标格式：000001.SZ
         if(realCode.find("sz") == std::string::npos) {
             realCode = std::string(realCode.substr(2, 6));
+            dataCode = realCode;
             realCode.append(".SH_index");
+            dataCode.append(".SH");
         }
         else {
             realCode = std::string(realCode.substr(2, 6));
+            dataCode = realCode;
             realCode.append(".SZ_index");
+            dataCode.append(".SZ");
+        }
+
+        // 写入到本程序存储的对象副本当中
+        if(instance.idToIndexMap[currId].find(dataCode) != instance.idToIndexMap[currId].end()) {
+            QString tempQStr = QString::fromStdString(temp);
+            StockIndexBatchInfo& originBatchInfo = instance.idToIndexMap[currId][dataCode];
+            originBatchInfo.decodeFromStrForSina(tempQStr);
+            //instance.idToIndexMap[currId][dataCode].decodeFromStrForSina(tempQStr);
         }
 
         if(instance.idToConMapMap[currId].find(realCode) != instance.idToConMapMap[currId].end()) {
@@ -352,11 +428,13 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
             instance.compressMap[currId].startCompress();
             std::vector<unsigned char> compressRst = instance.compressMap[currId].endCompress(finalIndexInfo);
             instance.redisMap[currId].writeBinaryDataToStr(realCode, compressRst.data(), compressRst.size());
+            //std::cout << currId << "sync to Redis " << std::endl;
         }
 
         instance.idToConMapMap[currId][realCode] = !syncToRedis ? std::move(currIndexInfo) : std::string();
 
     }
+    //std::cout << "before final step -1" << std::endl;
     //std::cout << boost::this_thread::get_id() << " release(write) lock : " << currId << std::endl;
 }
 
@@ -378,6 +456,7 @@ void DataCenter::startFetchIndexInfo() {
     unsigned long need_threads = vector.size() / 330;
     need_threads += vector.size() % 330 > 0 ? 1 : 0;
     need_threads = num_threads > need_threads ? need_threads : num_threads;
+    //need_threads = 1;
 
     std::cout << "my thread number is " << need_threads << std::endl;
     int each_threads_pro_num = static_cast<int>(vector.size() / need_threads);
@@ -415,4 +494,15 @@ void DataCenter::startExecIndexAna() noexcept {
     boost::thread tempThread(ana);
     std::cout << "ana thread id is: " << tempThread.get_id() << std::endl;
     tempThread.detach();
+}
+
+bool DataCenter::redisCommanWithArgv(int argc, const char** argv,
+                                     const size_t* argvlen) noexcept {
+    return redisCache.redisCommanWithArgv(argc, argv, argvlen);
+}
+
+void DataCenter::redisCommanWithArgvAndCallback(int argc, const char** argv,
+                                    const size_t* argvlen,
+                                    std::function<void (redisReply*)> callback) noexcept {
+    redisCache.redisCommanWithArgvAndCallback(argc, argv, argvlen, callback);
 }

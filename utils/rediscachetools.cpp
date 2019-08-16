@@ -165,11 +165,12 @@ bool RedisCacheTools::pushBackToList(std::string key,
     }
 
     // 将操作名称作为argv的第一个
-    int size = static_cast<int>(values.size()) + 1;
+    int size = static_cast<int>(values.size()) + 2;
     const char** argv = new const char*[size];
-    argv[0] = key.c_str();
-    for(int i = 1;i < size - 1;i++) {
-        argv[i] = values[i].c_str();
+    argv[0] = "lpush";
+    argv[1] = key.c_str();
+    for(int i = 2;i < size;i++) {
+        argv[i] = values[i - 2].c_str();
     }
     bool retVal = redisCommanWithArgv(size, argv, nullptr);
     delete[] argv;

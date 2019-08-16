@@ -7,7 +7,7 @@
 StockChartModel::StockChartModel() {
     DataCenter& dataCenter = DataCenter::getInstance();
     currSelectedKInfo = dataCenter.getStockBatchInfoByTsCode("000001.SZ");
-    currSelectedIndexInfo = dataCenter.getStockIndexInfo("000001.SZ");
+    currSelectedIndexInfo = dataCenter.getStockIndexInfoFromCache("000001.SZ");
 }
 
 void StockChartModel::setSelectedStock(std::string ts_code) noexcept {
@@ -38,8 +38,8 @@ StockBatchInfo* StockChartModel::getCurrStockKInfo() {
 }
 
 // TODO --此处可能有效率问题？毕竟拷贝的数据量有点大
-StockIndexBatchInfo StockChartModel::getCurrStockIndexInfo() {
+const StockIndexBatchInfo* StockChartModel::getCurrStockIndexInfo() {
     DataCenter& instance = DataCenter::getInstance();
-    currSelectedIndexInfo = instance.getStockIndexInfo(currSelectedTsCode);
-    return currSelectedIndexInfo;
+    currSelectedIndexInfo = instance.getStockIndexInfoFromCache(currSelectedTsCode);
+    return &currSelectedIndexInfo;
 }

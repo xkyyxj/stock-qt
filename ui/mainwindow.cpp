@@ -10,6 +10,18 @@
 #include "utils/zlibcompress.h"
 #include "maintable.h"
 #include <hiredis/hiredis.h>
+#include <data/anaresult.h>
+#include "data/lastmaxupindexrst.h"
+
+void MainWindow::anaRstTypeSelect(const std::string& type) noexcept {
+    if(type == "lmu_ok") {
+        LastMaxUpIndexRst* rst = new LastMaxUpIndexRst(
+                    QString::fromStdString(type));
+        rst->initDataFromDB();
+        //tableModel->setAnaRst(rst);
+        //tableModel->getTableName();
+    }
+}
 
 void MainWindow::startCalculate() {
     Calculator::startCalcualte();

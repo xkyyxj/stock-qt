@@ -13,6 +13,10 @@ int MainTableModel::columnCount(const QModelIndex &/*parent*/) const {
     return selectColumns.size();
 }
 
+inline void MainTableModel::setAnaRst(AnaResult* rst) noexcept {
+    anaRst = rst;
+}
+
 QVariant MainTableModel::data(const QModelIndex &index, int role) const {
     if(!index.isValid())
         return QVariant();

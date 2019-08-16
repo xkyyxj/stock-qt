@@ -7,6 +7,7 @@
 
 #include "addconcerndialog.h"
 #include "delconcerndialog.h"
+#include "holdingchangedialog.h"
 
 class MainTable: public QTableView
 {
@@ -14,12 +15,14 @@ class MainTable: public QTableView
     QMenu* contextMenu;
     AddConcernDialog* addConcernDialog;
     DelConcernDialog* delConcernDialog;
+    HoldingChangeDialog* changeDialog;
 public:
     MainTable();
     MainTable(QSplitter*);
 public slots:
     void addConcernClicked();
     void delConcernClicked();
+    void changeShareClicked();
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
 };

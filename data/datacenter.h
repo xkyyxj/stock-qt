@@ -65,7 +65,15 @@ public:
 
     StockIndexBatchInfo getStockIndexInfo(const std::string& code);
 
+    StockIndexBatchInfo getStockIndexInfoFromCache(const std::string& code);
+
     std::string getStockIndexInfoStr(const std::string&);
+
+    bool redisCommanWithArgv(int argc, const char** argv, const size_t*
+                             argvlen) noexcept;
+
+    void redisCommanWithArgvAndCallback(int argc, const char** argv, const size_t*
+                             argvlen, std::function<void (redisReply*)>) noexcept;
 signals:
 	void indexInfoChanged();
 private:
@@ -73,6 +81,7 @@ private:
     std::map<QString, StockBatchInfo> kInfoMap;
     QSqlDatabase defaultDatabase;
 
+    // 公共的缓存工具，主要是用于ＵＩ线程的各种回调函数里面，其他勿用（非线程安全）
     RedisCacheTools redisCache;
 
     std::vector<std::map<std::string, std::string>> indexInfoMap;
@@ -86,6 +95,8 @@ private:
     std::map<boost::thread::id, QVector<QString>> containsMap;
     // 每个线程写入的map映射
     std::map<boost::thread::id, std::map<std::string, std::string>> idToConMapMap;
+    // 为了效率起见，存储一个分时数据的对象集合吧
+    std::map<boost::thread::id, std::map<std::string, StockIndexBatchInfo>> idToIndexMap;
 
     // 每个线程都有自己的压缩工具（非线程安全）
     std::map<boost::thread::id, zlib::ZLibCompress> compressMap;

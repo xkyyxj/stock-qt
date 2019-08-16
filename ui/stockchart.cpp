@@ -35,7 +35,7 @@ void StockChart::judgeDisplay(const QRect& rect, StockBatchInfo* kInfo) {
     // 对于剩余的空间，重新分配一下，以免右边会有很大的空白
     int currWidth = eachLineWidth * showNum;
     int leftWidth = rect.width() - currWidth;
-    lineNumPartOne = showNum / leftWidth;
+    lineNumPartOne = leftWidth > 0 ? showNum / leftWidth : 0;
 }
 
 static void paintSingleKLine(QPainter* painter, int x, int y, int width, int height, StockBatchInfo::SingleInfo& info) {
@@ -248,7 +248,7 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
     painter->setPen(pen);
     painter->setRenderHint(QPainter::Antialiasing);
 
-    StockIndexBatchInfo indexInfo = model->getCurrStockIndexInfo();
+    const StockIndexBatchInfo& indexInfo = *model->getCurrStockIndexInfo();
 
     // 沪深两市总交易时长（单位：秒）
     int totalSeconds = 4 * 60 * 60;
@@ -324,6 +324,7 @@ void StockChart::paintIndexLine(QPainter* painter, QPaintEvent *event) {
     int halfHeight = event->rect().height() / 2;
     int currMouseOnY = currMouseP.y();
     float mouseOnPct = std::abs(currMouseOnY - halfHeight) * max_pct / halfHeight;
+    mouseOnPct = currMouseOnY > halfHeight ? -mouseOnPct : mouseOnPct;
     QRect mouseOnPriceBack(mainContentWidth, currMouseP.y() - priceBackGroudHeight + 2, PRICE_AREA_WIDTH, priceBackGroudHeight);
     painter->drawRect(mouseOnPriceBack);
     QRect priceFillBack(mainContentWidth + 1, currMouseP.y() - priceBackGroudHeight + 3, PRICE_AREA_WIDTH - 2, priceBackGroudHeight - 2);

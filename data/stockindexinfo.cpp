@@ -3,6 +3,8 @@
 #include <exception>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
+#include <boost/utility/string_ref.hpp>
+#include <iostream>
 
 /**
  * 从新浪财经当中获取的数据解析为StockIndexBatchInfo对象（单条）
@@ -19,25 +21,26 @@ void StockIndexBatchInfo::decodeFromStrForSina(QString &str) {
         realCode = realCode.mid(2, 6);
         realCode.append(".SH");
     }
-    if(realCode == ts_code) {   // 只有是同当前股票编码相同的才能够进入
+    if(realCode == ts_code || ts_code.size() == 0) {   // 只有是同当前股票编码相同的才能够进入
         int mainStartIndex = str.indexOf("\"");
         int mainEndIndex = str.lastIndexOf("\"");
         QStringRef mainPart = str.midRef(mainStartIndex, mainEndIndex - mainStartIndex - 1);
         QVector<QStringRef> divRest = mainPart.split(",");
-        if(divRest.size() > 27) {
+        if(divRest.size() > 31) {
             SingleIndexInfo tempInfo;
             QStringRef temp = divRest[0]; // 当前股票名称
             ts_name = temp.toString();
 
             today_open = divRest[1].toFloat(); //　今日开盘价
             pre_close = divRest[2].toFloat(); //　昨日收盘价
-            for(int i = 3;i < divRest.size();i++) {
+            for(int i = 3;i < divRest.size() && i < 30;i++) {
                 tempInfo.mainContent[i - 3] = divRest[i].toDouble();
             }
             // 当前时间
             QString dateTimeStr = divRest[30].toString();
             dateTimeStr.append(" ").append(divRest[31]);
-            tempInfo.time = QDateTime::fromString(dateTimeStr);
+            tempInfo.time = QDateTime::fromString(dateTimeStr, "yyyy-MM-dd HH:mm:ss");
+            info_list.push_back(tempInfo);
         }
     }
 }
@@ -86,7 +89,7 @@ std::string StockIndexBatchInfo::encodeToStr() noexcept {
  * %ts_code,ts_name,today_open,pre_close:mainContent[0~26],time; \
  * mainContent[0~26],time;
  */
-bool StockIndexBatchInfo::decodeFromStr(std::string& input) noexcept {
+bool StockIndexBatchInfo::decodeFromStr(const std::string& input) noexcept {
     if(input.size() == 0) {
         return false;
     }
@@ -108,12 +111,16 @@ bool StockIndexBatchInfo::decodeFromStr(std::string& input) noexcept {
     today_open = QString::fromStdString(headSplitInfo[2]).toFloat();
     pre_close = QString::fromStdString(headSplitInfo[3]).toFloat();
 
+    //std::cout << ts_code.toStdString() << std::endl;
+
     // 将字符串当中的头部去掉，只留主体部分
-    input.erase(0, infoStartIndex - firstIndex + 1);
+    // TODO -- 可以在这个地方替换成boost::string_ref试下
+    boost::string_ref inputRef(input);
+    boost::string_ref mainPart = inputRef.substr(infoStartIndex + 1, std::string::npos);
 
     // 分割子串，获取分项信息
     std::vector<std::string> v;
-    boost::split(v, input, boost::is_any_of(";"), boost::token_compress_on);
+    boost::split(v, mainPart, boost::is_any_of(";"), boost::token_compress_on);
     for(auto temp : v) {
         SingleIndexInfo info;
         std::vector<std::string> mainContentV;
@@ -198,14 +205,14 @@ std::string& StockIndexBatchInfo::appendEncodeUseSina(std::string& origin, std::
         realCode.append(".SZ");
     }
 
+    // 每次都从最新的信息当中获取头部，就能够避免昨日开盘等信息获取的是旧的的问题
+    std::string preHead;
     std::string ts_code;
     bool originHasInfo = false;
+    preHead.append("%");
+    preHead.append(realCode).append(",");
     // 事前校验
-    if(origin.size() == 0) {
-        origin.append("%");
-        origin.append(realCode).append(",");
-    }
-    else {
+    if(origin.size() > 0) {
         if(origin.at(0) != '%') {
             throw new std::runtime_error("输入字符串格式不匹配！");
         }
@@ -231,10 +238,16 @@ std::string& StockIndexBatchInfo::appendEncodeUseSina(std::string& origin, std::
         std::vector<boost::iterator_range<std::string::iterator>> v;
         boost::split(v, mainPart, boost::is_any_of(","), boost::token_compress_on);
         if(v.size() > 31) {
+            preHead.append(std::string(v[0].begin(), v[0].end())).append(",");
+            preHead.append(std::string(v[1].begin(), v[1].end())).append(",");
+            preHead.append(std::string(v[2].begin(), v[2].end())).append(":");
             if(!originHasInfo) {
-                origin.append(std::string(v[0].begin(), v[0].end())).append(",");
-                origin.append(std::string(v[1].begin(), v[1].end())).append(",");
-                origin.append(std::string(v[2].begin(), v[2].end())).append(":");
+                origin = std::move(preHead);
+            }
+            else {
+                // 替换掉原先的头部，用preHead
+                size_t mainBeginIndex = origin.find_first_of(':');
+                origin.replace(0, mainBeginIndex + 1, preHead);
             }
 
             //　主体内容

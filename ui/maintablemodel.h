@@ -5,6 +5,7 @@
 #include <QAbstractTableModel>
 #include "data/datacenter.h"
 #include "commonenum.h"
+#include "data/anaresult.h"
 
 class MainTableModel: public QAbstractTableModel {
 public:
@@ -23,6 +24,8 @@ public:
     inline QString getTableName() noexcept {return tableName;}
 
     void selectData();
+
+    void setAnaRst(AnaResult* rst) noexcept;
 
     void setTableData(std::vector<std::vector<QVariant>>&) noexcept;
 
@@ -46,6 +49,9 @@ private:
     QString filter;
     DataCenter* dataCenter;
     std::vector<QString> displayHead;
+
+    // 当前的分析结果实例，包含了解析逻辑以及数据的存储
+    AnaResult* anaRst;
 
     // 指定当前的主键是什么
     QString primaryKey;

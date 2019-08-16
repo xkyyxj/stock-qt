@@ -1,4 +1,5 @@
-﻿#include <boost/uuid/uuid.hpp>
+﻿#include <limits>
+#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <iostream>
@@ -6,8 +7,8 @@
 #include "indexanalyzer.h"
 #include "data/stockbaseinfo.h"
 
-// 两次实时数据分析之间的时间价格不少于2000毫秒
-static const long TWO_ANA_DELTA_TIME = 2000;
+// 两次实时数据分析之间的时间价格不少于20000毫秒
+static const long TWO_ANA_DELTA_TIME = 20000;
 
 IndexAnalyzer::IndexAnalyzer() noexcept {
     // 生成一个唯一的UUID，作为数据库连接的标识符(避免同DataCenter当中的默认的数据库连接重名)
@@ -59,12 +60,13 @@ IndexAnalyzer::IndexAnalyzer(const IndexAnalyzer& origin) noexcept {
             currTime += target_delta;
         }
         sleep_until(currTime);
+        lastAnaTime = currTime;
 
         milis_t time2 = time_point_cast<milliseconds>(system_clock::now());
         for(size_t i = 0;i < stockList.size();i++) {
             StockBaseInfo currInfo = stockList[i];
             QString ts_code = currInfo.ts_code;
-            StockIndexBatchInfo retVal = instance.getStockIndexInfo(ts_code.toStdString());
+            const StockIndexBatchInfo retVal = instance.getStockIndexInfoFromCache(ts_code.toStdString());
             double up_rate = 0;
 //            if(judgeQuickUp(retVal, up_rate)) {
 //                QuickUp quick_up;
@@ -157,8 +159,9 @@ int IndexAnalyzer::quickDownThenUp(StockIndexBatchInfo& info) noexcept {
 }
 
 /**
- * 昨日涨停今日日线图上表现还算OK的:
- * 昨日涨停，并且今天在分时图上开启上涨模式：上涨速率大于等于1%每分钟
+ * 昨日涨停今日日线图上表现还算OK的
+ * 昨日涨停，并且今天在分时图上开启上涨模式：（正在上涨并且当前价格高于昨日收盘价)或者（涨幅达到３％）
+ * 正在上涨的含义是：相比于前一个低点，涨幅达到了１％
  * 存入redis当中，key为：lmu_ok
  */
 void IndexAnalyzer::analyzeLastMaxUp() noexcept {
@@ -175,29 +178,57 @@ void IndexAnalyzer::analyzeLastMaxUp() noexcept {
 
     std::vector<std::string> final_rst;
     for(size_t i = 0;i < last_max_up.size();i++) {
-        StockIndexBatchInfo retVal = instance.getStockIndexInfo(
+        StockIndexBatchInfo retVal = instance.getStockIndexInfoFromCache(
                     last_max_up[i].toStdString());
-        // 开始上涨
-        if(retVal.info_list.size() > 2) {
-            size_t lastIndex=  retVal.info_list.size() - 1;
-            double lastPrePrice = retVal.info_list[lastIndex - 1].mainContent[StockIndexBatchInfo::CURR_PRICE];
-            double lastPrice = retVal.info_list[lastIndex].mainContent[StockIndexBatchInfo::CURR_PRICE];
-            double currMax = retVal.info_list[lastIndex].mainContent[StockIndexBatchInfo::CURR_MAX];
-            double up_pct = (lastPrice - lastPrePrice) / lastPrePrice;
-            double timeDelta = retVal.info_list[lastIndex - 1].time.secsTo(
-                        retVal.info_list[lastIndex].time);
-            // 每分钟上涨的百分比
-            double up_rate = timeDelta > 0 ? up_pct / timeDelta * 60 : 0;
-            // 最新价格是最高价，并且上涨速率大于等于1%每分钟
-            if(lastPrice - currMax < 0.01 && up_rate >= 0.01) {
+        size_t indexInfoLastIndex = retVal.info_list.size() - 1;
+        double currPrice = retVal.info_list.size() > 0 ?
+                    retVal.info_list[indexInfoLastIndex].mainContent[StockIndexBatchInfo::CURR_PRICE] : 0;
+        double lastLowPrice = currPrice;
+        for(size_t j = retVal.info_list.size() - 1;j < retVal.info_list.size();j--) {
+            double tempPrice = retVal.info_list[j].mainContent[StockIndexBatchInfo::CURR_PRICE];
+            lastLowPrice = tempPrice < lastLowPrice ? tempPrice : lastLowPrice;
+            if(tempPrice > lastLowPrice)
+                break;
+        }
+
+        // 计算一下涨跌幅(确保当前价格是近一小段时间内的新高)
+        if(currPrice - lastLowPrice > 0.001) {
+            double pct = (currPrice - lastLowPrice) / currPrice;
+            if(pct > 0.03 || (pct > 0.01 && currPrice > static_cast<double>(retVal.pre_close))) {
                 final_rst.push_back(retVal.ts_code.toStdString());
             }
         }
+        // 开始上涨
+//        if(retVal.info_list.size() > 2) {
+//            size_t lastIndex=  retVal.info_list.size() - 1;
+//            double lastPrePrice = retVal.info_list[lastIndex - 1].mainContent[StockIndexBatchInfo::CURR_PRICE];
+//            double lastPrice = retVal.info_list[lastIndex].mainContent[StockIndexBatchInfo::CURR_PRICE];
+//            double currMax = retVal.info_list[lastIndex].mainContent[StockIndexBatchInfo::CURR_MAX];
+//            double up_pct = (lastPrice - lastPrePrice) / lastPrePrice;
+//            double timeDelta = retVal.info_list[lastIndex - 1].time.secsTo(
+//                        retVal.info_list[lastIndex].time);
+//            // 每分钟上涨的百分比
+//            double up_rate = timeDelta > 0 ? up_pct / timeDelta * 60 : 0;
+//            // 最新价格是最高价，并且上涨速率大于等于1%每分钟
+//            if(lastPrice - currMax < 0.01 && up_rate >= 0.01) {
+//                final_rst.push_back(retVal.ts_code.toStdString());
+//            }
+//        }
     }
 
     if(final_rst.size() > 0) {
         cacheTools.delKey("lmu_ok");
-        cacheTools.pushBackToList("lmu_ok", final_rst);
+        size_t finalSize = final_rst.size() * 2 + 2;
+        const char* argv[finalSize];
+        argv[0] = "zadd";
+        argv[1] = "lmu_ok";
+        size_t count = 2;
+        for(std::string& str : final_rst) {
+            argv[count++] = "0";
+            argv[count++] = str.c_str();
+        }
+        cacheTools.redisCommanWithArgv(finalSize, argv, nullptr);
+        //cacheTools.pushBackToList("lmu_ok", final_rst);
     }
 }
 

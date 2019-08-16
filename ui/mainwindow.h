@@ -26,6 +26,7 @@ public:
     ~MainWindow();
 
 private:
+    void anaRstTypeSelect(const std::string&) noexcept;
     void initTableModel();
     void initMenuAction();
 
