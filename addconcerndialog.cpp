@@ -76,3 +76,7 @@ void AddConcernDialog::accept() {
                               defaultDatabase);
     QDialog::accept();
 }
+
+void AddConcernDialog::setTsCode(QString ts_code) noexcept {
+    ui->ts_code->setText(ts_code);
+}

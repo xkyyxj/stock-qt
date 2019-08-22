@@ -7,6 +7,9 @@ CommonAnaResult::CommonAnaResult(QString _tableMeta): AnaResult (_tableMeta)
     isValid = false;
 }
 
+void CommonAnaResult::setFilter(QString filter) noexcept {
+    this->filter = filter;
+}
 
 void CommonAnaResult::initDataFromDB() {
     bool is_redis;
@@ -35,11 +38,6 @@ void CommonAnaResult::initDataFromDB() {
                 displayHead.push_back(query.value("display_name").toString());
             }
         }, QSqlDatabase());
-
-        QDate currDate = QDate::currentDate();
-        QString dateStr = currDate.toString("yyyy-MM-dd");
-        QString filter(" where date='");
-        filter.append(dateStr).append("'");
 
         // 通知表格model进行数据更新
         if(dbTableName.size() > 0) {

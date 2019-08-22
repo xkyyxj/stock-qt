@@ -12,14 +12,43 @@
 #include <hiredis/hiredis.h>
 #include <data/anaresult.h>
 #include "data/lastmaxupindexrst.h"
+#include "data/commonanaresult.h"
 
-void MainWindow::anaRstTypeSelect(const std::string& type) noexcept {
+void MainWindow::anaRstTypeSelect(const std::string& type, const std::string& tableMeta) noexcept {
     if(type == "lmu_ok") {
         LastMaxUpIndexRst* rst = new LastMaxUpIndexRst(
-                    QString::fromStdString(type));
+                    QString::fromStdString(tableMeta));
         rst->initDataFromDB();
-        //tableModel->setAnaRst(rst);
+        tableModel->setAnaRst(rst);
         //tableModel->getTableName();
+    }
+    else if(type == "concern_stock") {
+        CommonAnaResult* rst = new CommonAnaResult(
+                    QString::fromStdString(tableMeta));
+        QString wherePart("where is_remove='N'");
+        rst->setFilter(wherePart);
+        rst->initDataFromDB();
+        tableModel->setAnaRst(rst);
+    }
+    else if(type == "big_down" || type == "big_down_up") {
+        CommonAnaResult* rst = new CommonAnaResult(
+                    QString::fromStdString(tableMeta));
+        QString wherePart("where del_date is null");
+        rst->setFilter(wherePart);
+        rst->initDataFromDB();
+        tableModel->setAnaRst(rst);
+    }
+    else {
+        CommonAnaResult* rst = new CommonAnaResult(
+                    QString::fromStdString(tableMeta));
+
+        QDate currDate = QDate::currentDate();
+        QString dateStr = currDate.toString("yyyy-MM-dd");
+        QString filter(" where date='");
+        filter.append(dateStr).append("'");
+        rst->setFilter(filter);
+        rst->initDataFromDB();
+        tableModel->setAnaRst(rst);
     }
 }
 
@@ -28,23 +57,6 @@ void MainWindow::startCalculate() {
 }
 
 void MainWindow::initTableModel() {
-    /*QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "db");
-    db.setHostName("localhost");
-    db.setDatabaseName("stock");
-    db.setUserName("root");
-    db.setPassword("123");
-    std::cout << "22222222" << std::endl;
-    if(!db.open()) {
-        std::cout << "123123123" << std::endl;
-    }
-    tableModel = new QSqlRelationalTableModel(this, db);
-    tableModel->setTable("category_content");
-    tableModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
-    //tableModel->setRelation(2, QSqlRelation("stock_list", "ts_code", "ts_code"));
-    tableModel->setHeaderData(0, Qt::Horizontal, tr("pk"));
-    tableModel->setHeaderData(1, Qt::Horizontal, tr("Salary"));
-    tableModel->setHeaderData(2, Qt::Horizontal, tr("pk11"));
-    tableModel->select();*/
     DataCenter& dataCenter = DataCenter::getInstance();
     std::vector<QString> selectColumns;
     selectColumns.push_back("ana_category_detail.ts_code");
@@ -186,111 +198,7 @@ void MainWindow::treeNodeSelected(const QItemSelection &selected, const QItemSel
         }
     }, QSqlDatabase());
 
-    if(!is_redis) {
-        std::vector<QString> selectedColumns, tableHead;
-        QString tableDetailInfoQry("select * from table_column where pk_tablemeta='");
-        tableDetailInfoQry.append(pk_tablemeta).append("'");
-        instance.executeQuery(tableDetailInfoQry, [&selectedColumns, &tableHead](QSqlQuery& query) -> void {
-            while(query.next()) {
-                selectedColumns.push_back(query.value("column_name").toString());
-                tableHead.push_back(query.value("display_name").toString());
-            }
-        }, QSqlDatabase());
-
-        QDate currDate = QDate::currentDate();
-        QString dateStr = currDate.toString("yyyy-MM-dd");
-        QString filter(" where date='");
-        filter.append(dateStr).append("'");
-
-        // 通知表格model进行数据更新
-        if(tableName.size() > 0) {
-            tableModel->setTableName(tableName);
-            tableModel->setSelectColumns(selectedColumns);
-            tableModel->setDisplayHeadInfo(tableHead);
-            if(std::find(selectedColumns.begin(), selectedColumns.end(),
-                         QString("date")) != selectedColumns.end()) {
-                tableModel->setFilter(filter);
-            }
-            // 特殊处理一下关注的股票
-            else if(tableName == "concern_stock") {
-                tableModel->setFilter(" where is_remove='N'");
-            }
-            tableModel->selectData();
-        }
-        return;
-    }
-
-    // 如果是存储在redis缓存的当中的数据……
-    if(tableName == "lmu_ok") {
-        std::vector<std::vector<QVariant>> rst;
-        std::vector<std::string> ts_codes;
-        std::vector<double> up_pct;
-        const char** argv = new const char*[5];
-        argv[0] = "zrevrange";
-        argv[1] = tableName.toStdString().c_str();
-        argv[2] = "0";
-        argv[3] = "-1";
-        argv[4] = "withscores";
-        cacheTools.redisCommanWithArgvAndCallback(5, argv, nullptr, [&ts_codes, &up_pct](redisReply* reply) -> void {
-            // 构造显示数据
-            if(reply->type == REDIS_REPLY_ARRAY) {
-                size_t size = reply->elements;
-                for(size_t i = 0;i < size;i++) {
-                    if(i % 2 == 0) {
-                        ts_codes.push_back(std::string(reply->element[i]->str));
-                    }
-                    else {
-                        std::string pct(reply->element[i]->str);
-                        up_pct.push_back(std::stod(pct));
-                    }
-                }
-            }
-        });
-
-        delete[] argv;
-        if(ts_codes.size() <= 0) {
-            return;
-        }
-        // 查询股票名称等相关信息
-        std::string querySql("select name from stock_list where ts_code in ('");
-        for(size_t i = 0 ;i < ts_codes.size();i++) {
-            querySql.append(ts_codes[i]).append("','");
-        }
-        querySql.append("') order by find_in_set(ts_code,'");
-        for(size_t i = 0 ;i < ts_codes.size();i++) {
-            querySql.append(ts_codes[i]).append(",");
-        }
-        querySql.append("')");
-
-        instance.executeQuery(QString::fromStdString(querySql), [&ts_codes, &up_pct, &rst](QSqlQuery& query) -> void {
-            size_t count = 0;
-            while(query.next()) {
-                std::vector<QVariant> row;
-                row.push_back(QString::fromStdString(ts_codes[count]));
-                row.push_back(query.value("name"));
-                row.push_back(QString::fromStdString(std::to_string(up_pct[count])));
-                rst.push_back(row);
-                ++count;
-            }
-        }, QSqlDatabase());
-
-        std::vector<QString> columns;
-        columns.push_back(QString("ts_code"));
-        columns.push_back(QString("ts_name"));
-        columns.push_back(QString("up_pct"));
-
-        std::vector<QString> displayNames;
-        displayNames.push_back(QString("编码"));
-        displayNames.push_back(QString("名称"));
-        displayNames.push_back(QString("上涨百分比"));
-
-        tableModel->setTableData(rst);
-        tableModel->setSelectColumns(columns);
-        tableModel->setDisplayHeadInfo(displayNames);
-        QString primaryKey("ts_code");
-        tableModel->setPrimaryKey(primaryKey);
-        tableModel->updateView();
-    }
+    anaRstTypeSelect(tableName.toStdString(), pk_tablemeta.toStdString());
 }
 
 void MainWindow::setFetchIndexDelta() {

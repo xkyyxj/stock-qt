@@ -11,7 +11,6 @@ LastMaxUpIndexRst::LastMaxUpIndexRst(QString _tableMeta): AnaResult (_tableMeta)
 
 void LastMaxUpIndexRst::initDataFromDB() {
     DataCenter& instance = DataCenter::getInstance();
-    std::vector<std::vector<QVariant>> rst;
     std::vector<std::string> ts_codes;
     std::vector<double> up_pct;
     const char** argv = new const char*[5];
@@ -51,14 +50,14 @@ void LastMaxUpIndexRst::initDataFromDB() {
     }
     querySql.append("')");
 
-    instance.executeQuery(QString::fromStdString(querySql), [&ts_codes, &up_pct, &rst](QSqlQuery& query) -> void {
+    instance.executeQuery(QString::fromStdString(querySql), [this, &ts_codes, &up_pct](QSqlQuery& query) -> void {
         size_t count = 0;
         while(query.next()) {
             std::vector<QVariant> row;
             row.push_back(QString::fromStdString(ts_codes[count]));
             row.push_back(query.value("name"));
             row.push_back(QString::fromStdString(std::to_string(up_pct[count])));
-            rst.push_back(row);
+            data.push_back(row);
             ++count;
         }
     }, QSqlDatabase());

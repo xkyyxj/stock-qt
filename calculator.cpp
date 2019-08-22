@@ -47,6 +47,11 @@ void Calculator::operator()() noexcept {
     findContinueUpStock(3);
     findBigWave();
     lastDayMaxUp();
+    //　寻找已经大幅下跌的股票
+    findBigDown();
+
+    findBigDownThenUp();
+    std::cout << "all calcaulate is finished" << std::endl;
 }
 
 /**
@@ -391,6 +396,179 @@ void Calculator::findBigWave(int calDays) noexcept {
         insertParams.push_back(&stddevList);
         insertParams.push_back(&aveList);
         instance.executeInsert("big_wave", columns, insertParams,
+                               defaultDatabase);
+    }
+}
+
+void Calculator::findBigDown() noexcept {
+    struct BigDown {
+        QString ts_code ,ts_name;
+    };
+
+    std::vector<BigDown> rst;
+    DataCenter& instance = DataCenter::getInstance();
+
+    //　查询出所有已经添加到数据库当中的记录，如有有重复则不添加
+    std::vector<QString> alreadyContain;
+    QString sql("select ts_code from big_down where del_date is null");
+    instance.executeQuery(sql, [&alreadyContain](QSqlQuery& query) -> void {
+        while(query.next()) {
+            alreadyContain.push_back(query.value("ts_code").toString());
+        }
+    }, defaultDatabase);
+
+    // 跌幅达到了３５％添加到列表当中
+    for(size_t i = 0;i < stockList.size();i++) {
+        BigDown tempRst;
+        QString ts_code = stockList[i].ts_code;
+        StockBatchInfo dayInfo = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
+        if(dayInfo.info_list.size() == 0) {
+            continue;
+        }
+
+        float currPrice = dayInfo.info_list[dayInfo.info_list.size() - 1].close;
+        for(int j = dayInfo.info_list.size() - 1;j >= 0;j--) {
+            float tempPrice = dayInfo.info_list[j].close;
+            float changePct = (currPrice - tempPrice) / tempPrice;
+            // 实际上这只股票一直处于上涨过程当中，并且涨幅达到了１５％，放弃，看下一个
+            if(changePct > 0.15f) {
+                break;
+            }
+
+            // 如果一直下跌，并且跌幅达到了３５％并且没有在已添加列表当中，加入到候选列表当中
+            if(changePct < -0.35f &&
+                    std::find(alreadyContain.begin(),
+                              alreadyContain.end(),
+                              ts_code) == alreadyContain.end()) {
+                tempRst.ts_code = ts_code;
+                tempRst.ts_name = dayInfo.ts_name;
+                rst.push_back(tempRst);
+                break;
+            }
+        }
+    }
+
+    if(rst.size() > 0) {
+        std::vector<std::string> columns;
+        columns.push_back("ts_code");
+        columns.push_back("ts_findBigDownThenUpname");
+        columns.push_back("add_date");
+        std::vector<QVariantList*> insertParams;
+        QVariantList codeList;
+        QVariantList nameList;
+        QVariantList addDateList;
+        QDate date = QDate::currentDate();
+        for(BigDown& temp : rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            addDateList << date;
+        }
+        insertParams.push_back(&codeList);
+        insertParams.push_back(&nameList);
+        insertParams.push_back(&addDateList);
+        instance.executeInsert("big_down", columns, insertParams,
+                               defaultDatabase);
+    }
+}
+
+std::vector<float> Calculator::calculateMA(StockBatchInfo& info, int begin,
+                                           int end, int ma) noexcept {
+    if(info.info_list.size() == 0 || info.info_list.size() - 1 < begin
+            || info.info_list.size() - 1 < end || ma <= 1) {
+        return std::vector<float>();
+    }
+
+    float sumVal = 0;
+    std::vector<float> rst;
+    begin = begin - ma + 1 >= 0 ? begin - ma + 1 : begin;
+
+    for(int i = begin;i < begin + ma && i < info.info_list.size();i++) {
+        sumVal += info.info_list[i].close;
+    }
+
+    for(int i = begin + ma;i <= end && i < info.info_list.size();i++) {
+        rst.push_back(sumVal / ma);
+        // 减去第一个值
+        sumVal -= info.info_list[i - ma].close;
+        // 把当前值加入到总和当中
+        sumVal += info.info_list[i].close;
+    }
+    return rst;
+}
+
+void Calculator::findBigDownThenUp() noexcept {
+
+    struct BigDownUp {
+        QString ts_code, ts_name;
+    };
+
+    std::vector<BigDownUp> rst;
+    DataCenter& instance = DataCenter::getInstance();
+    // 查询出所有的大跌后的股票
+    QString queryDownUp("select ts_code from big_down");
+
+    std::vector<QString> checkRange;
+    instance.executeQuery(queryDownUp, [&checkRange](QSqlQuery& query) -> void {
+        while(query.next()) {
+            checkRange.push_back(query.value("ts_code").toString());
+        }
+    }, defaultDatabase);
+
+    // 查询已经存在于列表当中的
+    std::vector<QString> exits;
+    QString queryExists("select ts_code from big_down_up where del_date is null");
+    instance.executeQuery(queryExists, [&exits](QSqlQuery& query) -> void {
+        while(query.next()) {
+            exits.push_back(query.value("ts_code").toString());
+        }
+    }, defaultDatabase);
+
+    // 开始筛选工作
+    for(size_t i = 0;i < checkRange.size();i++) {
+        BigDownUp temp;
+        QString ts_code = checkRange[i];
+        StockBatchInfo info = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
+
+        // 计算一下ＭＡ值，看是否连续两天ＭＡ５开始上涨
+        if(info.info_list.size() > 10) {
+            int calBegin = info.info_list.size() - 10;
+            int calEnd = info.info_list.size() - 1;
+            std::vector<float> ma = calculateMA(info, calBegin, calEnd, 5);
+            float tempMA = ma.size() > 0 ? ma[ma.size() - 1] : 0;
+            for(size_t j = ma.size() - 2; j < ma.size();j--) {
+                // 只计算一个就可以了
+                if(tempMA > ma[j] &&
+                        std::find(exits.begin(),
+                                  exits.end(),
+                                  ts_code) == exits.end()) {
+                    temp.ts_code = info.ts_code;
+                    temp.ts_name = info.ts_name;
+                    rst.push_back(temp);
+                    break;
+                }
+            }
+        }
+    }
+
+    if(rst.size() > 0) {
+        std::vector<std::string> columns;
+        columns.push_back("ts_code");
+        columns.push_back("ts_name");
+        columns.push_back("add_date");
+        std::vector<QVariantList*> insertParams;
+        QVariantList codeList;
+        QVariantList nameList;
+        QVariantList addDateList;
+        QDate date = QDate::currentDate();
+        for(BigDownUp& temp : rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            addDateList << date;
+        }
+        insertParams.push_back(&codeList);
+        insertParams.push_back(&nameList);
+        insertParams.push_back(&addDateList);
+        instance.executeInsert("big_down_up", columns, insertParams,
                                defaultDatabase);
     }
 }

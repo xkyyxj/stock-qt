@@ -15,6 +15,8 @@ public:
     explicit AddConcernDialog(QWidget *parent = nullptr);
     ~AddConcernDialog();
 
+    void setTsCode(QString ts_code) noexcept;
+
 public slots:
     void accept();
 

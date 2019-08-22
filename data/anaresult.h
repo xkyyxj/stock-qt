@@ -25,13 +25,13 @@ public:
 
     void initDataFromDB(QString tableMeta, QString wherePart);
 
-    std::vector<std::vector<QVariant>>& getData() noexcept;
+    inline std::vector<std::vector<QVariant>>& getData() noexcept {return data;}
 
-    std::vector<QString>& getDBColumns() noexcept;
+    inline std::vector<QString>& getDBColumns() noexcept {return dbColumns;}
 
-    std::vector<QString>& getDisplayHead() noexcept;
+    inline std::vector<QString>& getDisplayHead() noexcept {return displayHead;}
 
-    bool getIsValid() noexcept;
+    inline bool getIsValid() noexcept {return isValid;}
 };
 
 #endif // ANARESULT_H

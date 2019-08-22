@@ -3,6 +3,8 @@
 #include <vector>
 #include <QSqlDatabase>
 
+#include "data/stockinfo.h"
+
 class StockBaseInfo;
 
 class Calculator {
@@ -28,6 +30,12 @@ public:
     void findBigWave(int = 10) noexcept;
 
     void lastDayMaxUp() noexcept;
+
+    void findBigDown() noexcept;
+
+    void findBigDownThenUp() noexcept;
+
+    std::vector<float> calculateMA(StockBatchInfo&, int, int, int) noexcept;
 };
 
 #endif // CALCULATOR_H

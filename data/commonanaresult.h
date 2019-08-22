@@ -5,8 +5,11 @@
 
 class CommonAnaResult: public AnaResult
 {
+    QString filter;
 public:
     CommonAnaResult(QString);
+
+    void setFilter(QString filter) noexcept;
 
     void initDataFromDB();
 };

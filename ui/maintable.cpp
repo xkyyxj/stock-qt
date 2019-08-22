@@ -20,8 +20,11 @@ MainTable::MainTable(QSplitter* parent): QTableView (parent) {
 }
 
 void MainTable::contextMenuEvent(QContextMenuEvent *) {
+    int currRow = this->currentIndex().row();
     MainTableModel* mainTableModel = static_cast<MainTableModel*>(this->model());
     QString tableName = mainTableModel->getTableName();
+    QModelIndex codeIndex = mainTableModel->index(currRow,0);
+    QString ts_code = mainTableModel->data(codeIndex, PRIMARY_KEY_ROLE).toString();
     contextMenu = new QMenu(this);
     QAction* addAction = new QAction(this);
     QAction* buyAction = new QAction(this);
@@ -39,6 +42,7 @@ void MainTable::contextMenuEvent(QContextMenuEvent *) {
         contextMenu->addAction(soldAction);
     }
     else {
+        addConcernDialog->setTsCode(ts_code);
         addAction->setText(tr("添加到自选"));
         connect(addAction, SIGNAL(triggered()), this, SLOT(addConcernClicked()));
         contextMenu->addAction(addAction);
