@@ -35,6 +35,9 @@ public:
 
     void findBigDownThenUp() noexcept;
 
+    //寻找处于低值阶段的股票
+    void findInLowPrice() noexcept;
+
     std::vector<float> calculateMA(StockBatchInfo&, int, int, int) noexcept;
 };
 

@@ -13,6 +13,7 @@
 #include <data/anaresult.h>
 #include "data/lastmaxupindexrst.h"
 #include "data/commonanaresult.h"
+#include "data/dailyconcern.h"
 
 void MainWindow::anaRstTypeSelect(const std::string& type, const std::string& tableMeta) noexcept {
     if(type == "lmu_ok") {
@@ -22,11 +23,9 @@ void MainWindow::anaRstTypeSelect(const std::string& type, const std::string& ta
         tableModel->setAnaRst(rst);
         //tableModel->getTableName();
     }
-    else if(type == "concern_stock") {
-        CommonAnaResult* rst = new CommonAnaResult(
+    else if(type == "daily_concern") {
+        AnaResult* rst = new DailyConcern(
                     QString::fromStdString(tableMeta));
-        QString wherePart("where is_remove='N'");
-        rst->setFilter(wherePart);
         rst->initDataFromDB();
         tableModel->setAnaRst(rst);
     }

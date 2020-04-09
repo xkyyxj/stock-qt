@@ -10,6 +10,7 @@ StockBatchInfo& StockBatchInfo::operator=(StockBatchInfo&& origin) noexcept {
     this->ts_code = std::move(origin.ts_code);
     this->ts_name = std::move(origin.ts_name);
     this->info_list = std::move(origin.info_list);
+    return *this;
 }
 
 void StockBatchInfo::addSingleDayInfos(QSqlQuery& queryInfo) {

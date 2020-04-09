@@ -219,7 +219,7 @@ void IndexAnalyzer::analyzeLastMaxUp() noexcept {
     if(final_rst.size() > 0) {
         cacheTools.delKey("lmu_ok");
         size_t finalSize = final_rst.size() * 2 + 2;
-        const char* argv[finalSize];
+        const char** argv = new const char*[finalSize];
         argv[0] = "zadd";
         argv[1] = "lmu_ok";
         size_t count = 2;

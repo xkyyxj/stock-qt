@@ -224,7 +224,7 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
         http::response<http::dynamic_body> res;
 
         // Receive the HTTP response
-        /*try {
+        try {
             http::read(socket, buffer, res);
         }
         catch(std::exception& e) {
@@ -233,8 +233,8 @@ void StockIndexFetch::initStratEndTimeP(bool isNextDay) noexcept {
             }
             std::cout << e.what() << std::endl;
             continue;
-        }*/
-        http::read(socket, buffer, res);
+        }
+        //http::read(socket, buffer, res);
 
         //<std::allocator<char>>
         std::string ret_result;

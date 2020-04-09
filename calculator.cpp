@@ -43,14 +43,15 @@ void Calculator::initData() noexcept {
 
 void Calculator::operator()() noexcept {
     initData();
-    findVWaveStock(3);
-    findContinueUpStock(3);
-    findBigWave();
-    lastDayMaxUp();
-    //　寻找已经大幅下跌的股票
-    findBigDown();
+//    findVWaveStock(3);
+//    findContinueUpStock(3);
+//    findBigWave();
+//    lastDayMaxUp();
+//    //　寻找已经大幅下跌的股票
+//    findBigDown();
 
-    findBigDownThenUp();
+//    findBigDownThenUp();
+    findInLowPrice();
     std::cout << "all calcaulate is finished" << std::endl;
 }
 
@@ -158,6 +159,81 @@ void Calculator::findVWaveStock(int checkDays) noexcept {
 
     boost::chrono::duration<double> end_time = boost::chrono::system_clock::now() - now;
     std::cout << "all finished in " << end_time.count() << "seconds" << std::endl;
+}
+
+/**
+ * 寻找价格处于历史低点的股票
+ */
+void Calculator::findInLowPrice() noexcept {
+    struct in_low {
+        QString ts_code, ts_name;
+        float curr_price;
+    };
+
+    DataCenter& instance = DataCenter::getInstance();
+    // 计算之前首先先把要生成天的数据删掉
+    QDate date = QDate::currentDate();
+    QString dateStr = date.toString("yyyy-MM-dd");
+    QString delWhere(" date='");
+    delWhere.append(dateStr).append("'");
+    instance.executeDel("in_low", delWhere, defaultDatabase);
+
+    std::vector<in_low> rst;
+    for(size_t i = 0;i < stockList.size();i++) {
+        in_low temp;
+        QString ts_code = stockList[i].ts_code;
+        StockBatchInfo dayInfo = instance.getStockDayInfo(ts_code.toStdString(), defaultDatabase);
+        int lastIndex = dayInfo.info_list.size() - 1;
+        if(lastIndex < 0) {
+            continue;
+        }
+        // 查询N天之内的最低价格，现在默认N为90天吧
+        if(dayInfo.info_list.size() < 90) {
+            continue;
+        }
+
+        // 第一步：查找最近N天之内的最低价，收盘价
+        float min_price = 100000000;
+        for(int i = dayInfo.info_list.size() - 90;i < dayInfo.info_list.size();i++) {
+            StockBatchInfo::SingleInfo& tempInfo = dayInfo.info_list[i];
+            min_price = min_price < tempInfo.close ? min_price : tempInfo.close;
+        }
+        // 第二步:最后一天的收盘价
+        float last_close = dayInfo.info_list[dayInfo.info_list.size() - 1].close;
+        // 第三步：查看一下最后价格同最低价之间的百分比，当前价格比最低价的涨幅低于10%，那么可以放入到数据库in_low当中
+        float pct = (last_close - min_price) / min_price;
+        if(pct >= 0.1f) {
+            continue;
+        }
+
+        in_low value;
+        value.ts_code = ts_code;
+        value.ts_name = dayInfo.ts_name;
+        value.curr_price = last_close;
+        rst.push_back(value);
+    }
+
+    if(rst.size() > 0) {
+        std::vector<std::string> columns;
+        columns.push_back("ts_code");
+        columns.push_back("ts_name");
+        columns.push_back("date");
+        std::vector<QVariantList*> insertParams;
+        QVariantList codeList;
+        QVariantList nameList;
+        QVariantList dateList;
+        QVariantList upPctList;
+        QDate date = QDate::currentDate();
+        for(in_low& temp : rst) {
+            codeList << temp.ts_code;
+            nameList << temp.ts_name;
+            dateList << date;
+        }
+        insertParams.push_back(&codeList);
+        insertParams.push_back(&nameList);
+        insertParams.push_back(&dateList);
+        instance.executeInsert("quick_up", columns, insertParams, defaultDatabase);
+    }
 }
 
 /**

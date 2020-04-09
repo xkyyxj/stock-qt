@@ -4,7 +4,7 @@
 #include "addconcerndialog.h"
 #include "ui_addconcerndialog.h"
 
-static std::string CONCERN_STOCK_TABLE_NAME = "concern_stock";
+static std::string CONCERN_STOCK_TABLE_NAME = "daily_concern";
 
 AddConcernDialog::AddConcernDialog(QWidget *parent) :
     QDialog(parent),

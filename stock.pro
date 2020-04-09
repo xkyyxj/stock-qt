@@ -10,10 +10,22 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets sql network
 
 DEFINES += BOOST_USE_LIB
 
+# 以下是Windows配置
+INCLUDEPATH+= D:\ProgramTools\Boost\boost_1_72_0_b1_rc2
+INCLUDEPATH+= ./3rdlibrary/hiredis/include
+INCLUDEPATH+= ./3rdlibrary/zlib/include
+
+LIBS += -L$$PWD/3rdlibrary/zlib/lib -lzlib
+LIBS += -L$$PWD/3rdlibrary/hiredis/lib -lhiredis
+LIBS += -L$$PWD/3rdlibrary/boost/lib -lboost_thread-vc142-mt-gd-x64-1_72 -lboost_system-vc142-mt-gd-x64-1_72 -lboost_chrono-vc142-mt-gd-x64-1_72 -lboost_date_time-vc142-mt-gd-x64-1_72
+# Windows配置 -- End
+
 TARGET = stock
 TEMPLATE = app
 
-LIBS += -lhiredis -lz -lboost_thread -lboost_system -lboost_chrono -lboost_date_time
+# Linux 配置
+# LIBS += -lhiredis -lz -lboost_thread -lboost_system -lboost_chrono -lboost_date_time
+# Linux配置End
 
 
 # The following define makes your compiler emit warnings if you use
@@ -34,6 +46,7 @@ SOURCES += \
         calculator.cpp \
         data/anaresult.cpp \
         data/commonanaresult.cpp \
+        data/dailyconcern.cpp \
         data/lastmaxupindexrst.cpp \
         delconcerndialog.cpp \
         holdingchangedialog.cpp \
@@ -61,6 +74,7 @@ HEADERS += \
         category.h \
         data/anaresult.h \
         data/commonanaresult.h \
+        data/dailyconcern.h \
         data/lastmaxupindexrst.h \
         data/stockbaseinfo.h \
         delconcerndialog.h \
