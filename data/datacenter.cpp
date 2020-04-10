@@ -25,7 +25,7 @@ DataCenter::DataCenter() {
     defaultDatabase.setHostName("localhost");
     defaultDatabase.setDatabaseName("stock");
     defaultDatabase.setUserName("root");
-    defaultDatabase.setPassword("ufida123");
+    defaultDatabase.setPassword("123");
     defaultDatabase.open();
 
     compressMap[boost::this_thread::get_id()] = zlib::ZLibCompress();

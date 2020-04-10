@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets sql network
 DEFINES += BOOST_USE_LIB
 
 # 以下是Windows配置
-INCLUDEPATH+= D:\ProgramTools\Boost\boost_1_72_0_b1_rc2
+INCLUDEPATH+= D:\program_tools\Boost\boost_1_72_0_b1_rc2
 INCLUDEPATH+= ./3rdlibrary/hiredis/include
 INCLUDEPATH+= ./3rdlibrary/zlib/include
 
