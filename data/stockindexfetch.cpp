@@ -6,6 +6,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/chrono/chrono_io.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
 
 #include <iostream>
 //#include <zlib.h>
@@ -20,7 +23,22 @@ static const long TWO_FETCH_DELTA_MILI = 2000;
 //1000
 static int SYNC_TO_REDIS_THRESHOLD = 10;
 
+void logInit() {
+    namespace logging = boost::log;
+    logging::core::get()->set_filter
+    (
+        logging::trivial::severity >= logging::trivial::info
+    );
+}
+
 StockIndexFetch::StockIndexFetch(const StockIndexFetch& origin): context(),socket(context) {
+    logInit();
+    BOOST_LOG_TRIVIAL(trace) << "A trace severity message";
+    BOOST_LOG_TRIVIAL(debug) << "A debug severity message";
+    BOOST_LOG_TRIVIAL(info) << "An informational severity message";
+    BOOST_LOG_TRIVIAL(warning) << "A warning severity message";
+    BOOST_LOG_TRIVIAL(error) << "An error severity message";
+    BOOST_LOG_TRIVIAL(fatal) << "A fatal severity message";
     this->codes = origin.codes;
     initStratEndTimeP();
     this->writeIndexInfo = origin.writeIndexInfo;

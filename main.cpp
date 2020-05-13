@@ -4,9 +4,27 @@
 #include "utils/zlibcompress.h"
 #include <QFile>
 #include <iostream>
+#include <CL/cl.h>
+
+void detect_gpu() {
+    cl_platform_id* platforms = nullptr;
+    cl_uint num_platforms;
+    cl_uint status = clGetPlatformIDs(3, platforms, &num_platforms);
+    if(!status) {
+        platforms = new cl_platform_id[num_platforms];
+        clGetPlatformIDs(3, platforms, &num_platforms);
+        std::cout << "PlatForm nums is " << num_platforms << std::endl;
+        for(int i = 0;i < num_platforms;i++) {
+            char pform_vendor[50];
+            clGetPlatformInfo(platforms[0], CL_PLATFORM_VENDOR, sizeof(pform_vendor), &pform_vendor, NULL);
+            std::cout << pform_vendor << std::endl;
+        }
+    }
+}
 
 int main(int argc, char *argv[])
 {
+    detect_gpu();
     QApplication a(argc, argv);
     MainWindow w;
     w.show();

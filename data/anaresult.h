@@ -25,6 +25,8 @@ public:
 
     void initDataFromDB(QString tableMeta, QString wherePart);
 
+    bool saveData(QString tableMeta);
+
     inline std::vector<std::vector<QVariant>>& getData() noexcept {return data;}
 
     inline std::vector<QString>& getDBColumns() noexcept {return dbColumns;}

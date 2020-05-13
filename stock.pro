@@ -14,10 +14,13 @@ DEFINES += BOOST_USE_LIB
 INCLUDEPATH+= D:\program_tools\Boost\boost_1_72_0_b1_rc2
 INCLUDEPATH+= ./3rdlibrary/hiredis/include
 INCLUDEPATH+= ./3rdlibrary/zlib/include
+INCLUDEPATH+= ./3rdlibrary/opencl/include
 
+LIBS += -L$$PWD/3rdlibrary/opencl/lib -lOpenCL
 LIBS += -L$$PWD/3rdlibrary/zlib/lib -lzlib
 LIBS += -L$$PWD/3rdlibrary/hiredis/lib -lhiredis
-LIBS += -L$$PWD/3rdlibrary/boost/lib -lboost_thread-vc142-mt-gd-x64-1_72 -lboost_system-vc142-mt-gd-x64-1_72 -lboost_chrono-vc142-mt-gd-x64-1_72 -lboost_date_time-vc142-mt-gd-x64-1_72
+LIBS += -L$$PWD/3rdlibrary/boost/lib -lboost_thread-vc142-mt-gd-x64-1_72 -lboost_system-vc142-mt-gd-x64-1_72 -lboost_chrono-vc142-mt-gd-x64-1_72 -lboost_date_time-vc142-mt-gd-x64-1_72 \
+    -lboost_log-vc142-mt-gd-x64-1_72
 # Windows配置 -- End
 
 TARGET = stock

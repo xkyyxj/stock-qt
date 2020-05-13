@@ -77,7 +77,7 @@ void Calculator::findVWaveStock(int checkDays) noexcept {
     // 下降过程当中必须是阴线，并且最后一根阳线收盘价高于前一天开盘价
     std::vector<VWave> downGreenUpHigh;
     // 下降过程当中必须是阴线，并且最后一根阳线收盘价可低于前一天开盘价
-     std::vector<VWave> downGreenUpLow;
+    std::vector<VWave> downGreenUpLow;
     // 下降过程当中可以是阳线或阴线，并且最后一根阳线收盘价高于前一天开盘价
     std::vector<VWave> downRedUpHigh;
     // 下降过程当中可以是阳线或阴线，并且最后一根阳线收盘价可低于前一天开盘价
