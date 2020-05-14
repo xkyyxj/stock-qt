@@ -28,7 +28,11 @@ public:
     StockBatchInfo(StockBatchInfo&& origin) noexcept;
     StockBatchInfo() noexcept {}
 
+    SingleInfo* getOneDayInfo(int i) noexcept;
+
     StockBatchInfo& operator=(const StockBatchInfo&) = delete;
+
+    int getLength() noexcept;
 
     StockBatchInfo& operator=(StockBatchInfo&&) noexcept;
     void addSingleDayInfos(QSqlQuery& quryInfo);

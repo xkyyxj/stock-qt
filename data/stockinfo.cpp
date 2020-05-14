@@ -13,6 +13,17 @@ StockBatchInfo& StockBatchInfo::operator=(StockBatchInfo&& origin) noexcept {
     return *this;
 }
 
+StockBatchInfo::SingleInfo* StockBatchInfo::getOneDayInfo(int i) noexcept {
+    if(i < info_list.size()) {
+        return &info_list[i];
+    }
+    return nullptr;
+}
+
+int StockBatchInfo::getLength() noexcept {
+    return info_list.size();
+}
+
 void StockBatchInfo::addSingleDayInfos(QSqlQuery& queryInfo) {
     while(queryInfo.next()) {
         SingleInfo singleInfo;

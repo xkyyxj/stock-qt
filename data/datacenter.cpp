@@ -20,6 +20,17 @@ DataCenter& DataCenter::getInstance() {
     return *dataCenter;
 }
 
+// 创建SQL数据库连接
+QSqlDatabase DataCenter::createDatabase() {
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL");
+    db.setHostName("localhost");
+    db.setDatabaseName("stock");
+    db.setUserName("root");
+    db.setPassword("123");
+    db.open();
+    return db;
+}
+
 DataCenter::DataCenter() {
     defaultDatabase = QSqlDatabase::addDatabase("QMYSQL");
     defaultDatabase.setHostName("localhost");
@@ -100,8 +111,8 @@ std::vector<StockBaseInfo> DataCenter::getStockList(QSqlDatabase& database) noex
  */
 StockBatchInfo DataCenter::getStockDayInfo(const std::string& ts_code, QSqlDatabase& database, std::string spe_filter) noexcept {
     StockBatchInfo finalResult;
-    std::string sql("select stock_base_info.*,name from stock_base_info join stock_list on stock_list.ts_code=stock_base_info.ts_code where stock_base_info.ts_code=?");
-    sql.append(spe_filter);
+    std::string sql("select stock_base_info.*,name from stock_base_info join stock_list on stock_list.ts_code=stock_base_info.ts_code where stock_base_info.ts_code=? ");
+    //sql.append(spe_filter);
     QSqlQuery query(database);
     query.prepare(QString::fromStdString(sql));
     query.addBindValue(QString::fromStdString(ts_code));
@@ -119,7 +130,10 @@ StockBatchInfo DataCenter::getStockDayInfo(const std::string& ts_code, QSqlDatab
         info.open = query.value("open").toFloat();
         info.close = query.value("close").toFloat();
         info.pct_chg = query.value("pct_chg").toFloat();
-        info.tradeDate = query.value("trade_date").toDate();
+        // 日期格式比较特殊，特殊处理一下
+        QString dateStr = query.value("trade_date").toString();
+        QDate date = QDate::fromString(dateStr, "yyyyMMdd");
+        info.tradeDate = date;
         finalResult.info_list.push_back(info);
     }
     return finalResult;
@@ -390,6 +404,7 @@ void DataCenter::writeIndexInfo(std::string& input, bool syncToRedis) {
             //instance.idToIndexMap[currId][dataCode].decodeFromStrForSina(tempQStr);
         }
 
+        // 判定一下是否原先已经有缓存的分时数据，然后分支判定写入
         if(instance.idToConMapMap[currId].find(realCode) != instance.idToConMapMap[currId].end()) {
             std::string& origin = instance.idToConMapMap[currId].at(realCode);
             currIndexInfo = StockIndexBatchInfo::appendEncodeUseSina(origin, temp);

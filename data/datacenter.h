@@ -57,14 +57,21 @@ public:
 
     void startExecIndexAna() noexcept;
 
+    // 获取股票信息列表
     std::vector<StockBaseInfo> getStockList(QSqlDatabase&) noexcept;
 
+    // 获取一只股票的日线信息（根据ts_code）
     StockBatchInfo getStockDayInfo(const std::string& ts_code, QSqlDatabase& temp, std::string spe_filter=std::string()) noexcept;
 
+    // 将股票的分时信息写入到redis当中，其中第一个是分时信息的字符串
     static void writeIndexInfo(std::string&, bool syncToRedis);
 
+    // 获取股票的分时信息，从redis当中获取
     StockIndexBatchInfo getStockIndexInfo(const std::string& code);
 
+    static QSqlDatabase createDatabase();
+
+    //
     StockIndexBatchInfo getStockIndexInfoFromCache(const std::string& code);
 
     std::string getStockIndexInfoStr(const std::string&);

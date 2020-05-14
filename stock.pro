@@ -4,14 +4,14 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets sql network
 
 DEFINES += BOOST_USE_LIB
 
 # 以下是Windows配置
-INCLUDEPATH+= D:\program_tools\Boost\boost_1_72_0_b1_rc2
+INCLUDEPATH+= D:\programTools\Boost\boost_1_72_0_b1_rc2
 INCLUDEPATH+= ./3rdlibrary/hiredis/include
 INCLUDEPATH+= ./3rdlibrary/zlib/include
 INCLUDEPATH+= ./3rdlibrary/opencl/include
@@ -47,10 +47,12 @@ CONFIG += c++11
 SOURCES += \
         addconcerndialog.cpp \
         calculator.cpp \
+        comparelinedialog.cpp \
         data/anaresult.cpp \
         data/commonanaresult.cpp \
         data/dailyconcern.cpp \
         data/lastmaxupindexrst.cpp \
+        datalinedialog.cpp \
         delconcerndialog.cpp \
         holdingchangedialog.cpp \
         indexanalyzer.cpp \
@@ -75,11 +77,13 @@ HEADERS += \
         addconcerndialog.h \
         calculator.h \
         category.h \
+        comparelinedialog.h \
         data/anaresult.h \
         data/commonanaresult.h \
         data/dailyconcern.h \
         data/lastmaxupindexrst.h \
         data/stockbaseinfo.h \
+        datalinedialog.h \
         delconcerndialog.h \
         holdingchangedialog.h \
         indexanalyzer.h \
@@ -104,6 +108,8 @@ HEADERS += \
 
 FORMS += \
         addconcerndialog.ui \
+        comparelinedialog.ui \
+        datalinedialog.ui \
         delconcerndialog.ui \
         holdingchangedialog.ui \
         infodisplay.ui \

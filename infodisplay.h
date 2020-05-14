@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "data/stockinfo.h"
 
+// 信息显示弹窗，一个小窗口，用来显示选中的K线的信息，日期，收盘价，开盘价等信息
 namespace Ui {
 class InfoDisplay;
 }

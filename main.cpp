@@ -16,7 +16,7 @@ void detect_gpu() {
         std::cout << "PlatForm nums is " << num_platforms << std::endl;
         for(int i = 0;i < num_platforms;i++) {
             char pform_vendor[50];
-            clGetPlatformInfo(platforms[0], CL_PLATFORM_VENDOR, sizeof(pform_vendor), &pform_vendor, NULL);
+            clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, sizeof(pform_vendor), &pform_vendor, NULL);
             std::cout << pform_vendor << std::endl;
         }
     }

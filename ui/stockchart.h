@@ -43,7 +43,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    void judgeDisplay(const QRect& rect, StockBatchInfo* kInfo);
+    int judgeDisplay(const QRect& rect, StockBatchInfo* kInfo);
 
 private:
     QList<StockInfo> kList;
@@ -58,9 +58,6 @@ private:
 
     // 显示的K线区间，根据index值来判定
     int startIndex, endIndex;
-
-    // 是否是第一次加载界面，每当要显示的K线有变动的时候，都会将这个变量重置为true
-    bool isFirstRender;
 
     // 当前鼠标的位置
     QPoint currMouseP;

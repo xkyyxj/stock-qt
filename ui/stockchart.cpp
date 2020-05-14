@@ -4,8 +4,11 @@
 #include <cmath>
 #include <boost/chrono.hpp>
 
+// 最小的K线宽度
 static const int MIN_K_LINE_WIDTH = 6;
+// 默认的K线宽度
 static const int DEFAULT_K_LINE_WIDTH = 20;
+// 最大的K线宽度
 static const int MAX_K_LINE_WIDTH = 25;
 
 static const int INDEX_TWO_POINT_TIME_DELTA = 45;
@@ -21,21 +24,26 @@ static const int PRICE_MARGIN_LEFT = 5;
 static const int KLINE_PADDING = 2;
 
 /*
+ * 判定一下股票K线列表，从哪条显示到哪条？然后每条K线的宽度eachLineWidth
  * 鉴于如果要显示的K线太多的话，那么可能会显示不过来，那么判定一下，最多显示多少条
  */
-void StockChart::judgeDisplay(const QRect& rect, StockBatchInfo* kInfo) {
-    int showNum = endIndex - startIndex;
-    showNum = showNum <= 0 ? kInfo->info_list.size() : ++showNum;
-    int eachWidth = rect.width() / showNum;
-    if(eachWidth < MIN_K_LINE_WIDTH) {
-        eachWidth = DEFAULT_K_LINE_WIDTH;
+int StockChart::judgeDisplay(const QRect& rect, StockBatchInfo* kInfo) {
+    int displayNum = rect.width() / eachLineWidth;
+    // endIndex如果是-1的话，那么就是第一次的渲染，优先渲染最后的数据
+    std::cout << "total width: " << rect.width() << " added width : " << displayNum * eachLineWidth << std::endl;
+    if(endIndex == -1) {
+        endIndex = kInfo->getLength() - 1;
+        startIndex = endIndex - displayNum + 1 >= 0 ? endIndex - displayNum + 1 : 0;
     }
-    eachLineWidth = eachWidth;
-
-    // 对于剩余的空间，重新分配一下，以免右边会有很大的空白
-    int currWidth = eachLineWidth * showNum;
-    int leftWidth = rect.width() - currWidth;
-    lineNumPartOne = leftWidth > 0 ? showNum / leftWidth : 0;
+    else {
+        int delta = displayNum - (endIndex - startIndex + 1);
+        int delta_half = delta / 2;
+        int right_add = endIndex + delta_half < kInfo->getLength() ? delta_half : kInfo->getLength() - endIndex - 1;
+        endIndex += right_add;
+        int left_add = delta - right_add;
+        startIndex = startIndex - left_add < 0 ? 0 : startIndex - left_add;
+    }
+    return 0;
 }
 
 static void paintSingleKLine(QPainter* painter, int x, int y, int width, int height, StockBatchInfo::SingleInfo& info) {
@@ -97,9 +105,11 @@ StockChart::StockChart(QWidget* parent) : QFrame(parent) {
     setFocusPolicy(Qt::ClickFocus);
 
     currDisplayType = DisplayType::K_TYPE;
-    isFirstRender = true;
 
     startIndex = endIndex = -1;
+
+    // 设置一下默认的K线宽度
+    eachLineWidth = DEFAULT_K_LINE_WIDTH;
 
     // 下面这行代码使得鼠标不按下的时候也能跟踪鼠标移动事件
     setMouseTracking(true);
@@ -122,7 +132,6 @@ void StockChart::infoTypeChanged(int type) {
 }
 
 void StockChart::stockInfoChanged() {
-    isFirstRender = true;
     this->repaint();
 }
 
@@ -156,13 +165,6 @@ void StockChart::paintKLine(QPainter* painter, QPaintEvent *event) {
     QRect mainRect(event->rect());
     mainRect.setWidth(mainContentWidth);
     judgeDisplay(mainRect, kInfo);
-    int displayNum = mainContentWidth / eachLineWidth;
-    if(isFirstRender) {
-        //统计一下显示区间
-        endIndex = kInfo->info_list.size() - 1;
-        startIndex = endIndex - displayNum + 1;
-        isFirstRender = false;
-    }
 
     // 统计一下最大和最小价差
     float maxPrice = 0, minPrice = 1000000;
@@ -427,8 +429,6 @@ void StockChart::mouseMoveEvent(QMouseEvent *event) {
 
 void StockChart::keyReleaseEvent(QKeyEvent *event) {
     StockBatchInfo* kInfo = model->getCurrStockKInfo();
-    // 每次按下Up或者Down键，变动十根K线
-    int totalChangeItemCount = 10;
     if(currDisplayType == DisplayType::K_TYPE) {
         switch(event->key()) {
         case Qt::Key_Left:
@@ -447,29 +447,13 @@ void StockChart::keyReleaseEvent(QKeyEvent *event) {
             break;
         case Qt::Key_Up:
             // 当K线的宽度小于最大K线宽度的时候才能够放大
-            if(eachLineWidth < MAX_K_LINE_WIDTH) {
-                if(endIndex - startIndex > 20) {
-                    startIndex += 5;
-                    endIndex  -= 5;
-                }
-                update();
-            }
+            eachLineWidth = eachLineWidth + 4 < MAX_K_LINE_WIDTH ? eachLineWidth + 4 : MIN_K_LINE_WIDTH;
+            update();
             break;
         case Qt::Key_Down:
             // 当K线的宽度大于最小K线宽度的时候才能够缩小
-            if(eachLineWidth > MIN_K_LINE_WIDTH) {
-                if(startIndex > 5) {
-                    startIndex -= 5;
-                    totalChangeItemCount -= 5;
-                }
-                else {
-                    totalChangeItemCount -= startIndex;
-                    startIndex = 0;
-                }
-                endIndex = (endIndex + totalChangeItemCount) < kInfo->info_list.size() ? endIndex + totalChangeItemCount
-                                                                                       : kInfo->info_list.size() - 1;
-                update();
-            }
+            eachLineWidth = eachLineWidth - 4 > MIN_K_LINE_WIDTH ? eachLineWidth - 4 : MIN_K_LINE_WIDTH;
+            update();
             break;
         }
     }
@@ -477,7 +461,6 @@ void StockChart::keyReleaseEvent(QKeyEvent *event) {
 
 
 void StockChart::resizeEvent(QResizeEvent *) {
-    isFirstRender = true;
     update();
 }
 

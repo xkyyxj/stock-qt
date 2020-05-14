@@ -40,6 +40,7 @@ public slots:
     void treeNodeSelected(const QItemSelection &selected, const QItemSelection &deselected);
 
     void startCalculate();
+    void showCompareCharts();
 
 private:
     Ui::MainWindow *ui;

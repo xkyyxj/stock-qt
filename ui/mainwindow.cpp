@@ -14,6 +14,7 @@
 #include "data/lastmaxupindexrst.h"
 #include "data/commonanaresult.h"
 #include "data/dailyconcern.h"
+#include "comparelinedialog.h"
 
 void MainWindow::anaRstTypeSelect(const std::string& type, const std::string& tableMeta) noexcept {
     if(type == "lmu_ok") {
@@ -55,6 +56,11 @@ void MainWindow::startCalculate() {
     Calculator::startCalcualte();
 }
 
+void MainWindow::showCompareCharts() {
+    CompareLineDialog* dialog = new CompareLineDialog(this);
+    dialog->show();
+}
+
 void MainWindow::initTableModel() {
     DataCenter& dataCenter = DataCenter::getInstance();
     std::vector<QString> selectColumns;
@@ -71,6 +77,10 @@ void MainWindow::initMenuAction() {
     // 计算按钮
     QAction* calculateAction = ui->actioncalculate;
     connect(calculateAction, &QAction::triggered, this, &MainWindow::startCalculate);
+
+    // 折线趋势比较
+    QAction* compareAction = ui->compareAction;
+    connect(compareAction, &QAction::triggered, this, &MainWindow::showCompareCharts);
 }
 
 MainWindow::MainWindow(QWidget *parent) :
